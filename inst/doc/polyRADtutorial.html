@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Lindsay V. Clark, University of Illinois, Urbana-Champaign" />
+
+<meta name="date" content="2018-08-02" />
+
+<title>polyRAD Tutorial</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; position: absolute; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; }
+pre.numberSource a.sourceLine:empty
+  { position: absolute; }
+pre.numberSource a.sourceLine::before
+  { content: attr(data-line-number);
+    position: absolute; left: -5em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#header {
+text-align: center;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">polyRAD Tutorial</h1>
+<h4 class="author"><em>Lindsay V. Clark, University of Illinois, Urbana-Champaign</em></h4>
+<h4 class="date"><em>02 August 2018</em></h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction">Introduction <a name="introduction"></a></a></li>
+<li><a href="#summary-of-available-functions">Summary of available functions <a name="functions"></a></a></li>
+<li><a href="#estimating-genotype-probabilities-in-a-mapping-population">Estimating genotype probabilities in a mapping population <a name="mapping"></a></a></li>
+<li><a href="#estimating-genotype-probabilities-in-a-diversity-panel">Estimating genotype probabilities in a diversity panel <a name="diversity"></a></a></li>
+<li><a href="#considerations-for-ram-and-processing-time">Considerations for RAM and processing time <a name="considerations"></a></a></li>
+<li><a href="#citing-polyrad">Citing polyRAD <a name="citation"></a></a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level2">
+<h2>Introduction <a name="introduction"></a></h2>
+<p>polyRAD is an R package that assists with genotype calling from DNA sequence datasets such as genotyping-by-sequencing (GBS) or restriction site-associated DNA sequencing (RAD) in polyploids and diploids. Genotype likelihoods are estimated from allelic read depth, genotype prior probabilities are estimated from population parameters, and then genotype posterior probabilities are estimated from likelihoods and prior probabilities. Posterior probabilities can be used directly in downstream analysis, converted to weighted mean genotypes for analyses of additive genetic effects, or used for export of the most probable genotypes for analyses that require discrete genotypic data.</p>
+<p>Analyses in polyRAD center around objects of an S3 class called <code>RADdata</code>. A single <code>RADdata</code> object contains the entire dataset of read depth and locus information, as well as parameters that are estimated during the course of analysis.</p>
+</div>
+<div id="summary-of-available-functions" class="section level2">
+<h2>Summary of available functions <a name="functions"></a></h2>
+<p>For any function named in this section, see its help page for more information. (For example by typing <code>?VCF2RADdata</code> into the R console.)</p>
+<p>Several functions are available for import of read depth data and (optionally) alignment information into a RADdata object:</p>
+<ul>
+<li><code>VCF2RADdata</code></li>
+<li><code>readTagDigger</code></li>
+<li><code>readStacks</code></li>
+<li><code>readHMC</code></li>
+</ul>
+<p>More generally, the <code>RADdata</code> function is used for constructing RADdata objects; see the help page for that function for more information on what data are needed.</p>
+<p>Several pipelines are available for genotype estimation, depending on how the population is structured (i.e. what the genotype prior probabilities should be.):</p>
+<ul>
+<li><code>PipelineMapping2Parents</code></li>
+<li><code>IterateHWE</code></li>
+<li><code>IterateHWE_LD</code></li>
+<li><code>IteratePopStruct</code></li>
+<li><code>IteratePopStructLD</code></li>
+</ul>
+<p>For exporting the estimated genotypes to other software:</p>
+<ul>
+<li><code>ExportGAPIT</code></li>
+<li><code>Export_rrBLUP_Amat</code></li>
+<li><code>Export_rrBLUP_GWAS</code></li>
+<li><code>Export_TASSEL_Numeric</code></li>
+</ul>
+<p>If you need continuous numerical genotypes exported in some other format, see <code>GetWeightedMeanGenotypes</code>. If you need discrete numerical genotypes, see <code>GetProbableGenotypes</code>. Also, <code>GetLikelyGen</code> returns the most likely genotypes (based on read depth only) for a single sample.</p>
+<p>There are also various utilities for manipulating RADdata objects:</p>
+<ul>
+<li><code>SubsetByTaxon</code></li>
+<li><code>SubsetByLocus</code></li>
+<li><code>SplitByChromosome</code></li>
+<li><code>MergeRareHaplotypes</code></li>
+<li><code>RemoveMonomorphicLoci</code></li>
+<li><code>EstimateContaminationRate</code></li>
+<li><code>StripDown</code></li>
+<li><code>LocusInfo</code></li>
+</ul>
+<p>See <code>?GetTaxa</code> for a list of accessor functions as well.</p>
+</div>
+<div id="estimating-genotype-probabilities-in-a-mapping-population" class="section level2">
+<h2>Estimating genotype probabilities in a mapping population <a name="mapping"></a></h2>
+<p>In this example, we’ll import some data from an F1 mapping population of <em>Miscanthus sinensis</em> that were output by the <a href="https://doi.org/10.1371/journal.pgen.1003215">UNEAK</a> pipeline. These data are from a study by Liu <em>et al.</em> (2015; <a href="https://doi.org/10.1111/gcbb.12275">doi:10.1111/gcbb.12275</a>; data available at <a href="http://hdl.handle.net/2142/79522" class="uri">http://hdl.handle.net/2142/79522</a>), and can be found in the “extdata” folder of the polyRAD installation. <em>Miscanthus</em> is an ancient tetraploid that has undergone diploidization. Given the ability of the UNEAK pipeline to filter paralogs, we expect most loci to behave in a diploid fashion, but some may behave in an allotetraploid fashion.</p>
+<p>We’ll start by loading polyRAD and importing the data into a <code>RADdata</code> object. The <code>possiblePloidies</code> argument indicates the expected inheritance modes: diploid (2) and allotetraploid (2 2).</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="kw">library</span>(polyRAD)</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">maphmcfile &lt;-<span class="st"> </span><span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;ClareMap_HapMap.hmc.txt&quot;</span>, </a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">                          <span class="dt">package =</span> <span class="st">&quot;polyRAD&quot;</span>)</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb1-5" data-line-number="5">mydata &lt;-<span class="st"> </span><span class="kw">readHMC</span>(maphmcfile,</a>
+<a class="sourceLine" id="cb1-6" data-line-number="6">                  <span class="dt">possiblePloidies =</span> <span class="kw">list</span>(<span class="dv">2</span>, <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>)))</a>
+<a class="sourceLine" id="cb1-7" data-line-number="7">mydata</a></code></pre></div>
+<pre><code>## ## RADdata object ##
+## 299 taxa and 50 loci
+## 766014 total reads
+## Assumed sample cross-contamination rate of 0.001
+## 
+## Possible ploidies:
+## Autodiploid (2)
+## Allotetraploid (2 2)</code></pre>
+<p>We can view the imported taxa names (subsetted here for space).</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="kw">GetTaxa</span>(mydata)[<span class="kw">c</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>,<span class="dv">293</span><span class="op">:</span><span class="dv">299</span>)]</a></code></pre></div>
+<pre><code>##  [1] &quot;IGR-2011-001&quot;    &quot;Kaskade-Justin&quot;  &quot;Map1-001&quot;       
+##  [4] &quot;Map1-002&quot;        &quot;Map1-003&quot;        &quot;Map1-005&quot;       
+##  [7] &quot;Map1-008&quot;        &quot;Map1-011&quot;        &quot;Map1-016&quot;       
+## [10] &quot;Map1-018&quot;        &quot;Map1-488&quot;        &quot;Map1-489&quot;       
+## [13] &quot;Map1-490&quot;        &quot;Map1-491&quot;        &quot;Zebrinus-Justin&quot;
+## [16] &quot;p196-150A-c&quot;     &quot;p877-348-b&quot;</code></pre>
+<p>All names starting with “Map” are progeny. “Kaskade-Justin” and “Zebrinus-Justin” are the parents. “IGR-2011-001”, “p196-150A-c”“, and”p877-348-b&quot; aren’t part of the population, but were doubled haploid lines that were used to screen for paralogous markers. We can tell polyRAD which taxa are the parents; since this is an F1 population it doesn’t matter which is “donor” and which is “recurrent”.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1">mydata &lt;-<span class="st"> </span><span class="kw">SetDonorParent</span>(mydata, <span class="st">&quot;Kaskade-Justin&quot;</span>)</a>
+<a class="sourceLine" id="cb5-2" data-line-number="2">mydata &lt;-<span class="st"> </span><span class="kw">SetRecurrentParent</span>(mydata, <span class="st">&quot;Zebrinus-Justin&quot;</span>)</a></code></pre></div>
+<p>The next thing we’ll want to do is add our genomic alignment data. For this dataset, we have alignment data stored in a CSV file, also in the “extdata” directory of the polyRAD installation. We’ll add it to the <code>locTable</code> slot of our <code>RADdata</code> object. Be sure to name the new columns “Chr” and “Pos”.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1">alignfile &lt;-<span class="st"> </span><span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;ClareMap_alignments.csv&quot;</span>, </a>
+<a class="sourceLine" id="cb6-2" data-line-number="2">                         <span class="dt">package =</span> <span class="st">&quot;polyRAD&quot;</span>)</a>
+<a class="sourceLine" id="cb6-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb6-4" data-line-number="4">aligndata &lt;-<span class="st"> </span><span class="kw">read.csv</span>(alignfile, <span class="dt">row.names =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb6-5" data-line-number="5"><span class="kw">head</span>(aligndata)</a></code></pre></div>
+<pre><code>##         Sorghum.LG Position.on.Sorghum.LG..bp.
+## TP5489           1                     4560204
+## TP13305          1                     4584260
+## TP18261          1                     2911329
+## TP18674          1                      387849
+## TP19030          1                     7576879
+## TP26698          1                     6972841</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1">mydata<span class="op">$</span>locTable<span class="op">$</span>Chr &lt;-<span class="st"> </span>aligndata[<span class="kw">GetLoci</span>(mydata), <span class="dv">1</span>]</a>
+<a class="sourceLine" id="cb8-2" data-line-number="2">mydata<span class="op">$</span>locTable<span class="op">$</span>Pos &lt;-<span class="st"> </span>aligndata[<span class="kw">GetLoci</span>(mydata), <span class="dv">2</span>]</a>
+<a class="sourceLine" id="cb8-3" data-line-number="3"><span class="kw">head</span>(mydata<span class="op">$</span>locTable)</a></code></pre></div>
+<pre><code>##         Chr     Pos
+## TP5489    1 4560204
+## TP13305   1 4584260
+## TP18261   1 2911329
+## TP18674   1  387849
+## TP19030   1 7576879
+## TP26698   1 6972841</code></pre>
+<p>If you don’t have alignment data in your own dataset, you can still use the pipeline described here. Just set <code>useLinkage = FALSE</code> in the code below. The advantage of including alignment data is that gentoypes at linked markers are used for imputing missing or correcting erroneous genotypes.</p>
+<p>Now we can run the pipeline. We’ll specify that we don’t want to include the parents or doubled haploid lines in the estimation of allele frequencies or evaluation of genotype frequenecies (<code>excludeTaxa</code> argument). The <code>allowedDeviation</code> argument indicates how different the apparent allele frequency (based on read depth ratios) can be from an expected allele frequency (determined based on ploidy and mapping population type) and still be classified as that allele frequency. The default settings assume an F1 population, but the population type can be adjusted using the <code>n.gen.backcrossing</code>, <code>n.gen.intermating</code>, and <code>n.gen.selfing</code> arguments.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">mydata &lt;-<span class="st"> </span><span class="kw">PipelineMapping2Parents</span>(mydata, </a>
+<a class="sourceLine" id="cb10-2" data-line-number="2">                                  <span class="dt">freqExcludeTaxa =</span> <span class="kw">c</span>(<span class="st">&quot;Kaskade-Justin&quot;</span>, </a>
+<a class="sourceLine" id="cb10-3" data-line-number="3">                                                      <span class="st">&quot;Zebrinus-Justin&quot;</span>,</a>
+<a class="sourceLine" id="cb10-4" data-line-number="4">                                                     <span class="st">&quot;IGR-2011-001&quot;</span>,</a>
+<a class="sourceLine" id="cb10-5" data-line-number="5">                                                     <span class="st">&quot;p196-150A-c&quot;</span>, </a>
+<a class="sourceLine" id="cb10-6" data-line-number="6">                                                     <span class="st">&quot;p877-348-b&quot;</span>),</a>
+<a class="sourceLine" id="cb10-7" data-line-number="7">                                  <span class="dt">freqAllowedDeviation =</span> <span class="fl">0.06</span>,</a>
+<a class="sourceLine" id="cb10-8" data-line-number="8">                                  <span class="dt">useLinkage =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<pre><code>## Making initial parameter estimates...</code></pre>
+<pre><code>## Updating priors using linkage...</code></pre>
+<pre><code>## Done.</code></pre>
+<p>We can examine the allele frequencies. Allele frequencies that fall outside of the expected ranges will be recorded as they were estimated from read depth.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" data-line-number="1"><span class="kw">table</span>(mydata<span class="op">$</span>alleleFreq)</a></code></pre></div>
+<pre><code>## 
+##             0.125 0.185006617653235              0.25             0.375 
+##                 1                 1                41                 1 
+##               0.5             0.625              0.75 0.814993382346765 
+##                12                 1                41                 1 
+##             0.875 
+##                 1</code></pre>
+<p>Genotype likelihood is also stored in the object for each possible genotype at each locus, taxon, and ploidy. This is the probability of seeing the observed distribution of reads.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" data-line-number="1">mydata<span class="op">$</span>alleleDepth[<span class="dv">3</span>,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>## TP26698_0 TP26698_1 TP28405_0 TP28405_1 TP28602_0 TP28602_1 TP28986_0 
+##         1         7         0        51         0        32        15 
+## TP28986_1 TP31810_0 TP31810_1 
+##        21        10        13</code></pre>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb18-1" data-line-number="1">mydata<span class="op">$</span>genotypeLikelihood[[<span class="dv">1</span>]][,<span class="dv">3</span>,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##      TP26698_0    TP26698_1     TP28405_0     TP28405_1     TP28602_0
+## 0 5.968571e-03 4.881592e-25  9.748162e-01 4.440892e-169  9.920309e-01
+## 1 3.115636e-02 3.115636e-02  4.440892e-16  4.440892e-16  2.365849e-10
+## 2 4.881592e-25 5.968571e-03 4.440892e-169  9.748162e-01 1.004524e-100
+##       TP28602_1    TP28986_0    TP28986_1    TP31810_0    TP31810_1
+## 0 1.004524e-100 5.158357e-45 1.309455e-56 1.087526e-30 2.697672e-35
+## 1  2.365849e-10 8.126672e-02 8.126672e-02 1.365876e-01 1.365876e-01
+## 2  9.920309e-01 1.309455e-56 5.158357e-45 2.697672e-35 1.087526e-30</code></pre>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb20-1" data-line-number="1">mydata<span class="op">$</span>genotypeLikelihood[[<span class="dv">2</span>]][,<span class="dv">3</span>,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##      TP26698_0    TP26698_1     TP28405_0     TP28405_1     TP28602_0
+## 0 5.968571e-03 4.881592e-25  9.748162e-01 4.440892e-169  9.920309e-01
+## 1 2.662559e-01 3.662109e-04  4.175805e-07  2.075288e-31  1.004524e-04
+## 2 3.115636e-02 3.115636e-02  4.440892e-16  4.440892e-16  2.365849e-10
+## 3 3.662109e-04 2.662559e-01  2.075288e-31  4.175805e-07  5.778929e-20
+## 4 4.881592e-25 5.968571e-03 4.440892e-169  9.748162e-01 1.004524e-100
+##       TP28602_1    TP28986_0    TP28986_1    TP31810_0    TP31810_1
+## 0 1.004524e-100 5.158357e-45 1.309455e-56 1.087526e-30 2.697672e-35
+## 1  5.778929e-20 1.233327e-02 1.746741e-05 2.592075e-02 9.787414e-04
+## 2  2.365849e-10 8.126672e-02 8.126672e-02 1.365876e-01 1.365876e-01
+## 3  1.004524e-04 1.746741e-05 1.233327e-02 9.787414e-04 2.592075e-02
+## 4  9.920309e-01 1.309455e-56 5.158357e-45 2.697672e-35 1.087526e-30</code></pre>
+<p>Above, for one individal (Map1-001), we see its read depth at the first ten alleles (first five loci), followed by the genotype likelihoods under diploid and tetraploid models. For example, at locus TP26698, heterozygosity is the most likely state, although there is a chance that this individual is homozygous for allele 1 and the one read of allele 0 was due to contamination. If this locus is allotetraploid, it is most likely that there is one copy of allele 0 and three copies of allele 1. Other loci have higher depth and as a result there is less uncertainty in the genotype, particularly for the diploid model.</p>
+<p>The prior genotype probabilities (expected genotype distributions) are also stored in the object for each possible ploidy. These distributions are estimated based on the most likely parent genotypes. Low confidence parent genotypes can be ignored by increasing the <code>minLikelihoodRatio</code> argument to <code>PipelineMapping2Parents</code>.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb22-1" data-line-number="1">mydata<span class="op">$</span>priorProb[[<span class="dv">1</span>]][,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##   TP26698_0 TP26698_1 TP28405_0 TP28405_1 TP28602_0 TP28602_1 TP28986_0
+## 0       0.0       0.5      0.25      0.25       0.5       0.0       0.5
+## 1       0.5       0.5      0.50      0.50       0.5       0.5       0.5
+## 2       0.5       0.0      0.25      0.25       0.0       0.5       0.0
+##   TP28986_1 TP31810_0 TP31810_1
+## 0       0.0       0.5       0.0
+## 1       0.5       0.5       0.5
+## 2       0.5       0.0       0.5</code></pre>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb24-1" data-line-number="1">mydata<span class="op">$</span>priorProb[[<span class="dv">2</span>]][,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##   TP26698_0 TP26698_1 TP28405_0 TP28405_1 TP28602_0 TP28602_1 TP28986_0
+## 0       0.0       0.0         0         0         0         0        NA
+## 1       0.0       0.5         0         0         1         0        NA
+## 2       0.5       0.5         1         1         0         0        NA
+## 3       0.5       0.0         0         0         0         1        NA
+## 4       0.0       0.0         0         0         0         0        NA
+##   TP28986_1 TP31810_0 TP31810_1
+## 0        NA         0         0
+## 1        NA         1         0
+## 2        NA         0         0
+## 3        NA         0         1
+## 4        NA         0         0</code></pre>
+<p>Here we see some pretty big differences under the diploid and allotetraploid models. For example, if TP28405 is behaving in a diploid fashion we expect F2-like segregation since both parents were heterozygous. However, if TP28405 is behaving in an allotetraploid fashion, we expect that both parents are homozygous at differing paralogous loci, resulting in no segregation.</p>
+<p>Now we want to determine which ploidy is the best fit for each locus. This is done by comparing genotype prior probabilities to genotype likelihoods and estimating a <span class="math inline">\(\chi^2\)</span> statistic. Lower values indicate a better fit.</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb26-1" data-line-number="1">mydata<span class="op">$</span>ploidyChiSq[,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##       TP26698_0  TP26698_1  TP28405_0  TP28405_1 TP28602_0 TP28602_1
+## [1,]   6.156873   6.156873   7.390125   7.390125  17.60031  17.60031
+## [2,] 130.424838 130.424838 178.066213 178.066213 230.45413 230.45413
+##      TP28986_0 TP28986_1   TP31810_0   TP31810_1
+## [1,]  2.107682  2.107682   0.1076233   0.1076233
+## [2,]        NA        NA 238.0402426 238.0402426</code></pre>
+<p>We can make a plot to get an overall sense of how well the markers fit the diploid versus tetraploid model.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb28-1" data-line-number="1"><span class="kw">plot</span>(mydata<span class="op">$</span>ploidyChiSq[<span class="dv">1</span>,], mydata<span class="op">$</span>ploidyChiSq[<span class="dv">2</span>,], </a>
+<a class="sourceLine" id="cb28-2" data-line-number="2">     <span class="dt">xlab =</span> <span class="st">&quot;Chi-squared for diploid model&quot;</span>,</a>
+<a class="sourceLine" id="cb28-3" data-line-number="3">     <span class="dt">ylab =</span> <span class="st">&quot;Chi-squared for tetraploid model&quot;</span>)</a>
+<a class="sourceLine" id="cb28-4" data-line-number="4"><span class="kw">abline</span>(<span class="dt">a =</span> <span class="dv">0</span>, <span class="dt">b =</span> <span class="dv">1</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>Alleles above the red line fit the diploid model better, and alleles below the red line fit the tetraploid model better. In this case it looks like everything is diploid with fairly high confidence.</p>
+<p>Now we’ll examine the posterior genotype probabilities. These are still estimated separately for each ploidy.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb29-1" data-line-number="1">mydata<span class="op">$</span>posteriorProb[[<span class="dv">1</span>]][,<span class="dv">3</span>,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##     TP26698_0   TP26698_1     TP28405_0     TP28405_1    TP28602_0
+## 0 0.00000e+00 4.95033e-28  1.000000e+00 2.131711e-174 1.000000e+00
+## 1 1.00000e+00 1.00000e+00  2.142491e-17  2.142491e-17 2.384855e-10
+## 2 4.95033e-28 0.00000e+00 2.131711e-174  1.000000e+00 0.000000e+00
+##      TP28602_1    TP28986_0    TP28986_1   TP31810_0   TP31810_1
+## 0 0.000000e+00 1.287625e-40 0.000000e+00 7.96211e-30 0.00000e+00
+## 1 2.384855e-10 1.000000e+00 1.000000e+00 1.00000e+00 1.00000e+00
+## 2 1.000000e+00 0.000000e+00 1.287625e-40 0.00000e+00 7.96211e-30</code></pre>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb31-1" data-line-number="1">mydata<span class="op">$</span>posteriorProb[[<span class="dv">2</span>]][,<span class="dv">3</span>,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##    TP26698_0  TP26698_1 TP28405_0 TP28405_1 TP28602_0 TP28602_1 TP28986_0
+## 0 0.00000000 0.00000000         0         0         0         0       NaN
+## 1 0.00000000 0.01442306         0         0         1         0       NaN
+## 2 0.98557694 0.98557694         1         1         0         0       NaN
+## 3 0.01442306 0.00000000         0         0         0         1       NaN
+## 4 0.00000000 0.00000000         0         0         0         0       NaN
+##   TP28986_1 TP31810_0 TP31810_1
+## 0       NaN         0         0
+## 1       NaN         1         0
+## 2       NaN         0         0
+## 3       NaN         0         1
+## 4       NaN         0         0</code></pre>
+<p>We can export the results for use in downstream analysis. The function below weights possible ploidies for each allele based on the results in <code>mydata$ploidyChiSq</code>, and for each taxon outputs a continuous, numerical genotype that is the mean of all possible genotypes weighted by genotype posterior probabilities. By default, one allele per locus is discarded in order to avoid mathematical singularities in downstream analysis. The continuous genotypes also range from zero to one by default, which can be changed with the <code>minval</code> and <code>maxval</code> arguments.</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb33-1" data-line-number="1">mywm &lt;-<span class="st"> </span><span class="kw">GetWeightedMeanGenotypes</span>(mydata)</a>
+<a class="sourceLine" id="cb33-2" data-line-number="2">mywm[<span class="kw">c</span>(<span class="dv">297</span>,<span class="dv">2</span><span class="op">:</span><span class="dv">6</span>), <span class="dv">6</span><span class="op">:</span><span class="dv">10</span>]</a></code></pre></div>
+<pre><code>##                    TP26698_1  TP28405_1    TP28602_0    TP28986_0
+## Zebrinus-Justin 5.110893e-01 0.50000014 2.485904e-18 3.232376e-39
+## Kaskade-Justin  1.521187e-06 0.49989345 5.002103e-01 5.000000e-01
+## Map1-001        4.998375e-01 0.98007584 1.773836e-02 5.000000e-01
+## Map1-002        1.126958e-02 0.47687372 4.822616e-01 1.740322e-24
+## Map1-003        1.126960e-02 0.03777935 1.773836e-02 5.000000e-01
+## Map1-005        1.126958e-02 0.50000000 4.746178e-01 1.578666e-42
+##                    TP31810_0
+## Zebrinus-Justin 5.000000e-01
+## Kaskade-Justin  1.583328e-20
+## Map1-001        4.998870e-01
+## Map1-002        1.129795e-04
+## Map1-003        1.129795e-04
+## Map1-005        4.998870e-01</code></pre>
+<p>Note that the parent weighted mean genotypes were estimated using gentoype likelihood only, ignoring the priors set for the progeny. In some places they may not match the progeny genotypes, indicating a likely error in parental genotype calling. We can see the parental genotypes that were used for estimating progeny priors using <code>$likelyGeno_donor</code> and <code>$likelyGeno_recurrent</code>.</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb35-1" data-line-number="1">mydata<span class="op">$</span>likelyGeno_donor[,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##   TP26698_0 TP26698_1 TP28405_0 TP28405_1 TP28602_0 TP28602_1 TP28986_0
+## 2         2         0         1         1         1         1         1
+## 4         4         0         2         2         2         2        NA
+##   TP28986_1 TP31810_0 TP31810_1
+## 2         1         0         2
+## 4        NA         0         4</code></pre>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb37-1" data-line-number="1">mydata<span class="op">$</span>likelyGeno_recurrent[,<span class="dv">11</span><span class="op">:</span><span class="dv">20</span>]</a></code></pre></div>
+<pre><code>##   TP26698_0 TP26698_1 TP28405_0 TP28405_1 TP28602_0 TP28602_1 TP28986_0
+## 2         1         1         1         1         0         2         0
+## 4         1         3         2         2         0         4         0
+##   TP28986_1 TP31810_0 TP31810_1
+## 2         2         1         1
+## 4         4         2         2</code></pre>
+</div>
+<div id="estimating-genotype-probabilities-in-a-diversity-panel" class="section level2">
+<h2>Estimating genotype probabilities in a diversity panel <a name="diversity"></a></h2>
+<p>Pipelines in polyRAD for processing a diversity panel (i.e. a germplasm collection, a set of samples collected in the wild, or a panel for genome-wide association analysis or genomic prediction) use iterative algorithms. Essentially, allele frequencies are re-estimated with each iteration until convergence is reached.</p>
+<p>Here we’ll import a RAD-seq dataset from a large collection of wild and ornamental <em>Miscanthus</em> from Clark <em>et al.</em> (2014; <a href="http://hdl.handle.net/10.1093/aob/mcu084">doi:10.1093/aob/mcu084</a>).</p>
+<p>Since the data are in VCF format, we will need the Bioconductor package VariantAnnotation to load them. See <a href="https://bioconductor.org/packages/release/bioc/html/VariantAnnotation.html" class="uri">https://bioconductor.org/packages/release/bioc/html/VariantAnnotation.html</a> for installation instructions.</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb39-1" data-line-number="1"><span class="kw">library</span>(VariantAnnotation)</a>
+<a class="sourceLine" id="cb39-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb39-3" data-line-number="3">myVCF &lt;-<span class="st"> </span><span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;Msi01genes.vcf&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;polyRAD&quot;</span>)</a></code></pre></div>
+<p>For your own VCF files, you will want to compress and index them before reading them. This has already been done for the file supplied with polyRAD, but here is how you would do it:</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb40-1" data-line-number="1">mybg &lt;-<span class="st"> </span><span class="kw">bgzip</span>(myVCF)</a>
+<a class="sourceLine" id="cb40-2" data-line-number="2"><span class="kw">indexTabix</span>(mybg, <span class="dt">format =</span> <span class="st">&quot;vcf&quot;</span>)</a></code></pre></div>
+<p>Now we can make our <code>RADdata</code> object. Because this is a small example dataset, we are setting <code>expectedLoci</code> and <code>expectedAlleles</code> to very low values; in a real dataset they should reflect how much data you are actually expecting. It is best to slightly overestimate the number of expected alleles and loci.</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb41-1" data-line-number="1">mydata &lt;-<span class="st"> </span><span class="kw">VCF2RADdata</span>(myVCF, <span class="dt">possiblePloidies =</span> <span class="kw">list</span>(<span class="dv">2</span>, <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>)),</a>
+<a class="sourceLine" id="cb41-2" data-line-number="2">                      <span class="dt">expectedLoci =</span> <span class="dv">100</span>, <span class="dt">expectedAlleles =</span> <span class="dv">500</span>)</a></code></pre></div>
+<pre><code>## Reading file...</code></pre>
+<pre><code>## Unpacking data from VCF...</code></pre>
+<pre><code>## Filtering markers...</code></pre>
+<pre><code>## Phasing 55 SNPs on chromosome 01</code></pre>
+<pre><code>## Reading file...</code></pre>
+<pre><code>## 24 loci imported.</code></pre>
+<pre><code>## Building RADdata object...</code></pre>
+<pre><code>## Merging rare haplotypes...</code></pre>
+<div class="sourceCode" id="cb50"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb50-1" data-line-number="1">mydata</a></code></pre></div>
+<pre><code>## ## RADdata object ##
+## 585 taxa and 24 loci
+## 422433 total reads
+## Assumed sample cross-contamination rate of 0.001
+## 
+## Possible ploidies:
+## Autodiploid (2)
+## Allotetraploid (2 2)</code></pre>
+<p>We can iteratively estimate genotype probabilities assuming Hardy-Weinberg equilibrium. The argument <code>tol</code> is set to a higher value than the default here in order to help the tutorial run more quickly. Since <em>Miscanthus</em> is highly outcrossing, we will leave the <code>selfing.rate</code> argument at its default of zero.</p>
+<div class="sourceCode" id="cb52"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb52-1" data-line-number="1">mydataHWE &lt;-<span class="st"> </span><span class="kw">IterateHWE</span>(mydata, <span class="dt">tol =</span> <span class="fl">1e-3</span>)</a></code></pre></div>
+<p>Let’s take a look at allele frequencies:</p>
+<div class="sourceCode" id="cb53"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb53-1" data-line-number="1"><span class="kw">hist</span>(mydataHWE<span class="op">$</span>alleleFreq, <span class="dt">breaks =</span> <span class="dv">20</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>We can do a different genotype probability estimation that models population structure and variation in allele frequencies among populations. We don’t need to specify populations, since principal components analysis is used to assess population structure assuming an isolation-by-distance model, with gradients of gene flow across many groups of individuals. This dataset includes a very broad sampling of <em>Miscanthus</em> across Asia, so it is very appropriate to model population structure in this case.</p>
+<p>For this example, since random number generation is used internally by <code>IteratePopStruct</code> for probabalistic principal components analysis, I am setting a seed so that the vignette always renders in the same way.</p>
+<div class="sourceCode" id="cb54"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb54-1" data-line-number="1"><span class="kw">set.seed</span>(<span class="dv">3908</span>)</a>
+<a class="sourceLine" id="cb54-2" data-line-number="2">mydataPopStruct &lt;-<span class="st"> </span><span class="kw">IteratePopStruct</span>(mydata, <span class="dt">nPcsInit =</span> <span class="dv">8</span>, <span class="dt">tol =</span> <span class="fl">5e-03</span>)</a></code></pre></div>
+<p>Allele frequency estimates have changed slightly:</p>
+<div class="sourceCode" id="cb55"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb55-1" data-line-number="1"><span class="kw">hist</span>(mydataPopStruct<span class="op">$</span>alleleFreq, <span class="dt">breaks =</span> <span class="dv">20</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>Here’s some of the population structure that was used for modeling allele frequencies (fairly weak in this case because so few markers were used):</p>
+<div class="sourceCode" id="cb56"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb56-1" data-line-number="1"><span class="kw">plot</span>(mydataPopStruct<span class="op">$</span>PCA[,<span class="dv">1</span>], mydataPopStruct<span class="op">$</span>PCA[,<span class="dv">2</span>],</a>
+<a class="sourceLine" id="cb56-2" data-line-number="2">     <span class="dt">xlab =</span> <span class="st">&quot;PC axis 1&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;PC axis 2&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>And here’s an example of allele frequency varying across the environment. Allele frequencies were estimated for each taxon, and are stored in the <code>$alleleFreqByTaxa</code> slot. In the plot below, color indicates estimated local allele frequency.</p>
+<div class="sourceCode" id="cb57"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb57-1" data-line-number="1">myallele &lt;-<span class="st"> </span><span class="dv">1</span></a>
+<a class="sourceLine" id="cb57-2" data-line-number="2">freqcol &lt;-<span class="st"> </span><span class="kw">rainbow</span>(<span class="dv">101</span>)[<span class="kw">round</span>(mydataPopStruct<span class="op">$</span>alleleFreqByTaxa[,myallele] <span class="op">*</span><span class="st"> </span><span class="dv">100</span>) <span class="op">+</span><span class="st"> </span><span class="dv">1</span>]</a>
+<a class="sourceLine" id="cb57-3" data-line-number="3"><span class="kw">plot</span>(mydataPopStruct<span class="op">$</span>PCA[,<span class="dv">1</span>], mydataPopStruct<span class="op">$</span>PCA[,<span class="dv">2</span>],</a>
+<a class="sourceLine" id="cb57-4" data-line-number="4">     <span class="dt">xlab =</span> <span class="st">&quot;PC axis 1&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;PC axis 2&quot;</span>, <span class="dt">pch =</span> <span class="dv">21</span>,</a>
+<a class="sourceLine" id="cb57-5" data-line-number="5">     <span class="dt">bg =</span> freqcol)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>As before, we can export the weighted mean genotypes for downstream analysis.</p>
+<div class="sourceCode" id="cb58"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb58-1" data-line-number="1">wmgenoPopStruct &lt;-<span class="st"> </span><span class="kw">GetWeightedMeanGenotypes</span>(mydataPopStruct)</a>
+<a class="sourceLine" id="cb58-2" data-line-number="2">wmgenoPopStruct[<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>,<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>]</a></code></pre></div>
+<pre><code>##                       S01_138045_G S01_139820_TT S01_139820_CT
+## KMS207-8              2.645137e-07   0.096667423    0.17087366
+## JM0051.003            2.326726e-01   0.316595966    0.19777504
+## JM0034.001            1.000000e-04   0.000100000    0.13146174
+## JM0220.001            1.000000e-04   0.504460393    0.20460317
+## NC-2010-003-001       2.993545e-01   0.000100000    0.05308058
+## JM0026.001            1.449631e-01   0.000100000    0.18328813
+## JM0026.002            8.935318e-03   0.080217548    0.21141645
+## PI294605-US64-0007-01 1.982370e-08   0.005706146    0.04644102
+## JM0058.001            6.938406e-01   0.000100000    0.22816820
+## UI10-00086-Silberfeil 9.421438e-01   0.000100000    0.13270507
+##                       S01_139883_G S01_150928_GG
+## KMS207-8              7.826446e-02  1.247877e-13
+## JM0051.003            9.579951e-03  9.156796e-08
+## JM0034.001            3.502285e-03  9.399818e-06
+## JM0220.001            1.549956e-01  9.224464e-10
+## NC-2010-003-001       2.100899e-05  6.213912e-14
+## JM0026.001            1.000000e-04  1.049680e-12
+## JM0026.002            7.372525e-03  1.322674e-10
+## PI294605-US64-0007-01 8.619531e-02  8.531214e-30
+## JM0058.001            1.000000e-04  1.189512e-07
+## UI10-00086-Silberfeil 2.108120e-03  3.147051e-30</code></pre>
+<p>If you expect that your species has high linkage disequilibrium, the functions <code>IterateHWE_LD</code> and <code>IteratePopStructLD</code> behave like <code>IterateHWE</code> and <code>IteratePopStruct</code>, respectively, but also update priors based on genotypes at linked loci.</p>
+</div>
+<div id="considerations-for-ram-and-processing-time" class="section level2">
+<h2>Considerations for RAM and processing time <a name="considerations"></a></h2>
+<p><code>RADdata</code> objects contain large matrices and arrays for storing read depth and the parameters that are estimated by the pipeline functions, and as a result require a lot of RAM (computer memory) in comparison to the weighted mean genotypes that are exported. A <code>RADdata</code> object that has just been imported will take up less RAM than one that has been processed by a pipeline function. <code>RADdata</code> objects will also take up more RAM (and take longer for pipeline functions to process) if they have more possible ploidies and/or higher ploidies.</p>
+<p>If you have hundreds of thousands, or possibly even tens of thousands, of markers in your dataset, it may be too large to process as one object on a typical computer. In that case, I recommend using the <code>SplitByChromosome</code> function immediately after import. This function will create separate <code>RADdata</code> objects by chromosomes or groups of chromosomes, and will save those objects to separate R workspace (.RData) files on your hard drive. You can then run a loop to re-import those objects one at a time, process each one with a pipeline function, and export weighted mean geneotypes (or any other parameters you wish to keep) to a file or a smaller R object. If you have access to a high performance computing cluster, you may instead wish to process individual chromosomes as parallel jobs.</p>
+<p>If you don’t have alignment positions for your markers, or if you want to divide them up some other way than by chromosome, see <code>SubsetByLocus</code>. If you are importing from VCF but don’t want to import the whole genome at once, see the examples on the help page for <code>VCF2RADdata</code> for how to import just a particular genomic region.</p>
+<p>If you are using one of the iterative pipelines, it is possible to set the <code>tol</code> argument higher in order to reduce processing time at the expense of accuracy.</p>
+<p>After you have run a pipeline, if you want to keep the <code>RADdata</code> object but discard any components that are not needed for genotype export, you can use the <code>StripDown</code> function.</p>
+<p>Below is an example script showing how I processed a real dataset with hundreds of thousands of SNPs. Note that the (very large) VCF files are not included with the polyRAD installation.</p>
+<div class="sourceCode" id="cb60"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb60-1" data-line-number="1"><span class="kw">library</span>(polyRAD)</a>
+<a class="sourceLine" id="cb60-2" data-line-number="2"><span class="kw">library</span>(VariantAnnotation)</a>
+<a class="sourceLine" id="cb60-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb60-4" data-line-number="4"><span class="co"># Two files produced by the TASSEL-GBSv2 pipeline using two different</span></a>
+<a class="sourceLine" id="cb60-5" data-line-number="5"><span class="co"># enzyme systems.</span></a>
+<a class="sourceLine" id="cb60-6" data-line-number="6">NsiI_file &lt;-<span class="st"> &quot;170705Msi_NsiI_genotypes.vcf.bgz&quot;</span></a>
+<a class="sourceLine" id="cb60-7" data-line-number="7">PstI_file &lt;-<span class="st"> &quot;170608Msi_PstI_genotypes.vcf.bgz&quot;</span></a>
+<a class="sourceLine" id="cb60-8" data-line-number="8"></a>
+<a class="sourceLine" id="cb60-9" data-line-number="9"><span class="co"># The vector allSam was defined outside of this script, and contains the </span></a>
+<a class="sourceLine" id="cb60-10" data-line-number="10"><span class="co"># names of all samples that I wanted to import.  Below I find sample names</span></a>
+<a class="sourceLine" id="cb60-11" data-line-number="11"><span class="co"># within the VCF files that match those samples.</span></a>
+<a class="sourceLine" id="cb60-12" data-line-number="12">NsiI_sam &lt;-<span class="st"> </span>allSam[allSam <span class="op">%in%</span><span class="st"> </span><span class="kw">samples</span>(<span class="kw">scanVcfHeader</span>(NsiI_file))]</a>
+<a class="sourceLine" id="cb60-13" data-line-number="13">PstI_sam &lt;-<span class="st"> </span>allSam[allSam <span class="op">%in%</span><span class="st"> </span><span class="kw">samples</span>(<span class="kw">scanVcfHeader</span>(PstI_file))]</a>
+<a class="sourceLine" id="cb60-14" data-line-number="14"></a>
+<a class="sourceLine" id="cb60-15" data-line-number="15"><span class="co"># Import two RADdata objects, assuming diploidy.  A large yield size was</span></a>
+<a class="sourceLine" id="cb60-16" data-line-number="16"><span class="co"># used due to the computer having 64 Gb RAM; on a typical laptop you</span></a>
+<a class="sourceLine" id="cb60-17" data-line-number="17"><span class="co"># would probably want to keep the default of 5000.</span></a>
+<a class="sourceLine" id="cb60-18" data-line-number="18">PstI_RAD &lt;-<span class="st"> </span><span class="kw">VCF2RADdata</span>(PstI_file, <span class="dt">samples =</span> PstI_sam, <span class="dt">yieldSize =</span> <span class="fl">5e4</span>,</a>
+<a class="sourceLine" id="cb60-19" data-line-number="19">                        <span class="dt">expectedAlleles =</span> <span class="fl">1e6</span>, <span class="dt">expectedLoci =</span> <span class="fl">2e5</span>)</a>
+<a class="sourceLine" id="cb60-20" data-line-number="20">NsiI_RAD &lt;-<span class="st"> </span><span class="kw">VCF2RADdata</span>(NsiI_file, <span class="dt">samples =</span> NsiI_sam, <span class="dt">yieldSize =</span> <span class="fl">5e4</span>,</a>
+<a class="sourceLine" id="cb60-21" data-line-number="21">                        <span class="dt">expectedAlleles =</span> <span class="fl">1e6</span>, <span class="dt">expectedLoci =</span> <span class="fl">2e5</span>)</a>
+<a class="sourceLine" id="cb60-22" data-line-number="22"></a>
+<a class="sourceLine" id="cb60-23" data-line-number="23"><span class="co"># remove any loci duplicated across the two sets</span></a>
+<a class="sourceLine" id="cb60-24" data-line-number="24"><span class="kw">nLoci</span>(PstI_RAD)    <span class="co"># 116757</span></a>
+<a class="sourceLine" id="cb60-25" data-line-number="25"><span class="kw">nLoci</span>(NsiI_RAD)    <span class="co"># 187434</span></a>
+<a class="sourceLine" id="cb60-26" data-line-number="26"><span class="kw">nAlleles</span>(PstI_RAD) <span class="co"># 478210</span></a>
+<a class="sourceLine" id="cb60-27" data-line-number="27"><span class="kw">nAlleles</span>(NsiI_RAD) <span class="co"># 952511</span></a>
+<a class="sourceLine" id="cb60-28" data-line-number="28">NsiI_keeploci &lt;-<span class="st"> </span><span class="kw">which</span>(<span class="op">!</span><span class="kw">GetLoci</span>(NsiI_RAD) <span class="op">%in%</span><span class="st"> </span><span class="kw">GetLoci</span>(PstI_RAD))</a>
+<a class="sourceLine" id="cb60-29" data-line-number="29"><span class="kw">cat</span>(<span class="kw">nLoci</span>(NsiI_RAD) <span class="op">-</span><span class="st"> </span><span class="kw">length</span>(NsiI_keeploci), </a>
+<a class="sourceLine" id="cb60-30" data-line-number="30">    <span class="dt">file =</span> <span class="st">&quot;180522Num_duplicate_loci.txt&quot;</span>) <span class="co">#992 duplicate</span></a>
+<a class="sourceLine" id="cb60-31" data-line-number="31">NsiI_RAD &lt;-<span class="st"> </span><span class="kw">SubsetByLocus</span>(NsiI_RAD, NsiI_keeploci)</a>
+<a class="sourceLine" id="cb60-32" data-line-number="32"></a>
+<a class="sourceLine" id="cb60-33" data-line-number="33"><span class="co"># combine allele depth into one matrix</span></a>
+<a class="sourceLine" id="cb60-34" data-line-number="34">PstI_depth &lt;-<span class="st"> </span>PstI_RAD<span class="op">$</span>alleleDepth</a>
+<a class="sourceLine" id="cb60-35" data-line-number="35">NsiI_depth &lt;-<span class="st"> </span>NsiI_RAD<span class="op">$</span>alleleDepth</a>
+<a class="sourceLine" id="cb60-36" data-line-number="36">total_depth &lt;-<span class="st"> </span><span class="kw">matrix</span>(0L, <span class="dt">nrow =</span> <span class="kw">length</span>(allSam), </a>
+<a class="sourceLine" id="cb60-37" data-line-number="37">                      <span class="dt">ncol =</span> <span class="kw">ncol</span>(PstI_depth) <span class="op">+</span><span class="st"> </span><span class="kw">ncol</span>(NsiI_depth),</a>
+<a class="sourceLine" id="cb60-38" data-line-number="38">                      <span class="dt">dimnames =</span> <span class="kw">list</span>(allSam, </a>
+<a class="sourceLine" id="cb60-39" data-line-number="39">                                      <span class="kw">c</span>(<span class="kw">colnames</span>(PstI_depth), </a>
+<a class="sourceLine" id="cb60-40" data-line-number="40">                                        <span class="kw">colnames</span>(NsiI_depth))))</a>
+<a class="sourceLine" id="cb60-41" data-line-number="41">total_depth[,<span class="kw">colnames</span>(PstI_depth)] &lt;-<span class="st"> </span>PstI_depth[allSam,]</a>
+<a class="sourceLine" id="cb60-42" data-line-number="42">total_depth[<span class="kw">rownames</span>(NsiI_depth),<span class="kw">colnames</span>(NsiI_depth)] &lt;-<span class="st"> </span>NsiI_depth</a>
+<a class="sourceLine" id="cb60-43" data-line-number="43"></a>
+<a class="sourceLine" id="cb60-44" data-line-number="44"><span class="co"># combine other slots</span></a>
+<a class="sourceLine" id="cb60-45" data-line-number="45">total_alleles2loc &lt;-<span class="st"> </span><span class="kw">c</span>(PstI_RAD<span class="op">$</span>alleles2loc, </a>
+<a class="sourceLine" id="cb60-46" data-line-number="46">                       NsiI_RAD<span class="op">$</span>alleles2loc <span class="op">+</span><span class="st"> </span><span class="kw">nLoci</span>(PstI_RAD))</a>
+<a class="sourceLine" id="cb60-47" data-line-number="47">total_locTable &lt;-<span class="st"> </span><span class="kw">rbind</span>(PstI_RAD<span class="op">$</span>locTable, NsiI_RAD<span class="op">$</span>locTable)</a>
+<a class="sourceLine" id="cb60-48" data-line-number="48">total_alleleNucleotides &lt;-<span class="st"> </span><span class="kw">c</span>(PstI_RAD<span class="op">$</span>alleleNucleotides, </a>
+<a class="sourceLine" id="cb60-49" data-line-number="49">                             NsiI_RAD<span class="op">$</span>alleleNucleotides)</a>
+<a class="sourceLine" id="cb60-50" data-line-number="50"></a>
+<a class="sourceLine" id="cb60-51" data-line-number="51"><span class="co"># build new RADdata object and save</span></a>
+<a class="sourceLine" id="cb60-52" data-line-number="52">total_RAD &lt;-<span class="st"> </span><span class="kw">RADdata</span>(total_depth, total_alleles2loc, total_locTable,</a>
+<a class="sourceLine" id="cb60-53" data-line-number="53">                     <span class="kw">list</span>(2L), <span class="fl">0.001</span>, total_alleleNucleotides)</a>
+<a class="sourceLine" id="cb60-54" data-line-number="54"><span class="co">#save(total_RAD, file = &quot;180524_RADdata_NsiIPstI.RData&quot;)</span></a>
+<a class="sourceLine" id="cb60-55" data-line-number="55"></a>
+<a class="sourceLine" id="cb60-56" data-line-number="56"><span class="co"># Make groups representing pairs of chromosomes, and one group for all </span></a>
+<a class="sourceLine" id="cb60-57" data-line-number="57"><span class="co"># non-assembled scaffolds.</span></a>
+<a class="sourceLine" id="cb60-58" data-line-number="58">splitlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="kw">c</span>(<span class="st">&quot;^01$&quot;</span>, <span class="st">&quot;^02$&quot;</span>),</a>
+<a class="sourceLine" id="cb60-59" data-line-number="59">                  <span class="kw">c</span>(<span class="st">&quot;^03$&quot;</span>, <span class="st">&quot;^04$&quot;</span>),</a>
+<a class="sourceLine" id="cb60-60" data-line-number="60">                  <span class="kw">c</span>(<span class="st">&quot;^05$&quot;</span>, <span class="st">&quot;^06$&quot;</span>),</a>
+<a class="sourceLine" id="cb60-61" data-line-number="61">                  <span class="kw">c</span>(<span class="st">&quot;^07$&quot;</span>, <span class="st">&quot;^08$&quot;</span>),</a>
+<a class="sourceLine" id="cb60-62" data-line-number="62">                  <span class="kw">c</span>(<span class="st">&quot;^09$&quot;</span>, <span class="st">&quot;^10$&quot;</span>),</a>
+<a class="sourceLine" id="cb60-63" data-line-number="63">                  <span class="kw">c</span>(<span class="st">&quot;^11$&quot;</span>, <span class="st">&quot;^12$&quot;</span>),</a>
+<a class="sourceLine" id="cb60-64" data-line-number="64">                  <span class="kw">c</span>(<span class="st">&quot;^13$&quot;</span>, <span class="st">&quot;^14$&quot;</span>, <span class="st">&quot;^15$&quot;</span>),</a>
+<a class="sourceLine" id="cb60-65" data-line-number="65">                  <span class="kw">c</span>(<span class="st">&quot;^16$&quot;</span>, <span class="st">&quot;^17$&quot;</span>),</a>
+<a class="sourceLine" id="cb60-66" data-line-number="66">                  <span class="kw">c</span>(<span class="st">&quot;^18$&quot;</span>, <span class="st">&quot;^194&quot;</span>), <span class="st">&quot;^SCAFFOLD&quot;</span>)</a>
+<a class="sourceLine" id="cb60-67" data-line-number="67"><span class="co"># split by chromosome and save seperate objects</span></a>
+<a class="sourceLine" id="cb60-68" data-line-number="68"><span class="kw">SplitByChromosome</span>(total_RAD, <span class="dt">chromlist =</span> splitlist, </a>
+<a class="sourceLine" id="cb60-69" data-line-number="69">                  <span class="dt">chromlist.use.regex =</span> <span class="ot">TRUE</span>, <span class="dt">fileprefix =</span> <span class="st">&quot;180524splitRAD&quot;</span>)</a>
+<a class="sourceLine" id="cb60-70" data-line-number="70"></a>
+<a class="sourceLine" id="cb60-71" data-line-number="71"><span class="co"># files with RADdata objects</span></a>
+<a class="sourceLine" id="cb60-72" data-line-number="72">splitfiles &lt;-<span class="st"> </span><span class="kw">grep</span>(<span class="st">&quot;^180524splitRAD&quot;</span>, <span class="kw">list.files</span>(<span class="st">&quot;.&quot;</span>), <span class="dt">value =</span> <span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb60-73" data-line-number="73"></a>
+<a class="sourceLine" id="cb60-74" data-line-number="74"><span class="co"># list to hold markers formatted for GAPIT/FarmCPU</span></a>
+<a class="sourceLine" id="cb60-75" data-line-number="75">GAPITlist &lt;-<span class="st"> </span><span class="kw">list</span>()</a>
+<a class="sourceLine" id="cb60-76" data-line-number="76"><span class="kw">length</span>(GAPITlist) &lt;-<span class="st"> </span><span class="kw">length</span>(splitfiles)</a>
+<a class="sourceLine" id="cb60-77" data-line-number="77"></a>
+<a class="sourceLine" id="cb60-78" data-line-number="78"><span class="co"># loop through RADdata objects</span></a>
+<a class="sourceLine" id="cb60-79" data-line-number="79"><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(splitfiles)){</a>
+<a class="sourceLine" id="cb60-80" data-line-number="80">  <span class="kw">load</span>(splitfiles[i])</a>
+<a class="sourceLine" id="cb60-81" data-line-number="81">  splitRADdata &lt;-<span class="st"> </span><span class="kw">IteratePopStructLD</span>(splitRADdata)</a>
+<a class="sourceLine" id="cb60-82" data-line-number="82">  GAPITlist[[i]] &lt;-<span class="st"> </span><span class="kw">ExportGAPIT</span>(splitRADdata)</a>
+<a class="sourceLine" id="cb60-83" data-line-number="83">}</a>
+<a class="sourceLine" id="cb60-84" data-line-number="84"><span class="co">#save(GAPITlist, file = &quot;180524GAPITlist.RData&quot;)</span></a>
+<a class="sourceLine" id="cb60-85" data-line-number="85"></a>
+<a class="sourceLine" id="cb60-86" data-line-number="86"><span class="co"># put together into one dataset for FarmCPU</span></a>
+<a class="sourceLine" id="cb60-87" data-line-number="87">GM.all &lt;-<span class="st"> </span><span class="kw">rbind</span>(GAPITlist[[<span class="dv">1</span>]]<span class="op">$</span>GM, GAPITlist[[<span class="dv">2</span>]]<span class="op">$</span>GM, GAPITlist[[<span class="dv">3</span>]]<span class="op">$</span>GM,</a>
+<a class="sourceLine" id="cb60-88" data-line-number="88">                GAPITlist[[<span class="dv">4</span>]]<span class="op">$</span>GM, GAPITlist[[<span class="dv">5</span>]]<span class="op">$</span>GM, GAPITlist[[<span class="dv">6</span>]]<span class="op">$</span>GM, </a>
+<a class="sourceLine" id="cb60-89" data-line-number="89">                GAPITlist[[<span class="dv">7</span>]]<span class="op">$</span>GM, GAPITlist[[<span class="dv">8</span>]]<span class="op">$</span>GM,</a>
+<a class="sourceLine" id="cb60-90" data-line-number="90">                GAPITlist[[<span class="dv">9</span>]]<span class="op">$</span>GM, GAPITlist[[<span class="dv">10</span>]]<span class="op">$</span>GM)</a>
+<a class="sourceLine" id="cb60-91" data-line-number="91">GD.all &lt;-<span class="st"> </span><span class="kw">cbind</span>(GAPITlist[[<span class="dv">1</span>]]<span class="op">$</span>GD, GAPITlist[[<span class="dv">2</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>],</a>
+<a class="sourceLine" id="cb60-92" data-line-number="92">                GAPITlist[[<span class="dv">3</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>], GAPITlist[[<span class="dv">4</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>],</a>
+<a class="sourceLine" id="cb60-93" data-line-number="93">                GAPITlist[[<span class="dv">5</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>], GAPITlist[[<span class="dv">6</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>],</a>
+<a class="sourceLine" id="cb60-94" data-line-number="94">                GAPITlist[[<span class="dv">7</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>], GAPITlist[[<span class="dv">8</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>], </a>
+<a class="sourceLine" id="cb60-95" data-line-number="95">                GAPITlist[[<span class="dv">9</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>], GAPITlist[[<span class="dv">10</span>]]<span class="op">$</span>GD[,<span class="op">-</span><span class="dv">1</span>])</a>
+<a class="sourceLine" id="cb60-96" data-line-number="96"><span class="co">#save(GD.all, GM.all, file = &quot;180525GM_GD_all_polyRAD.RData&quot;) # 1076888 markers</span></a></code></pre></div>
+</div>
+<div id="citing-polyrad" class="section level2">
+<h2>Citing polyRAD <a name="citation"></a></h2>
+<p>A preprint is available describing polyRAD:</p>
+<p>Clark LV, Lipka AE, and Sacks EJ (2018) polyRAD: Genotype calling with uncertainty from sequencing data in polyploids and diploids. bioRxiv, <a href="https://doi.org/10.1101/380899">doi:10.1101/380899</a>.</p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
