@@ -24,7 +24,7 @@ estimated from allelic read
 depth, genotype prior probabilities are estimated from population parameters,
 and then genotype posterior probabilities are estimated from likelihoods and
 prior probabilities.  Posterior probabilities can be used directly in 
-downstream analysis, converted to weighted mean genotypes for analyses
+downstream analysis, converted to posterior mean genotypes for analyses
 of additive genetic effects, or used for export of the most probable genotypes
 for analyses that require discrete genotypic data.
 
@@ -45,6 +45,7 @@ alignment information into a RADdata object:
 * `readTagDigger`
 * `readStacks`
 * `readHMC`
+* `readTASSELGBSv2`
 
 More generally, the `RADdata` function is used for constructing RADdata
 objects; see the help page for that function for more information on what 
@@ -65,6 +66,7 @@ For exporting the estimated genotypes to other software:
 * `Export_rrBLUP_Amat`
 * `Export_rrBLUP_GWAS`
 * `Export_TASSEL_Numeric`
+* `Export_polymapR`
 
 If you need continuous numerical genotypes exported in some other format, see 
 `GetWeightedMeanGenotypes`.  If you need discrete numerical genotypes, 
@@ -78,6 +80,7 @@ There are also various utilities for manipulating RADdata objects:
 * `SplitByChromosome`
 * `MergeRareHaplotypes`
 * `RemoveMonomorphicLoci`
+* `RemoveHighDepthLoci`
 * `EstimateContaminationRate`
 * `StripDown`
 * `LocusInfo`
@@ -154,17 +157,54 @@ the code below.  The advantage of including alignment data is that gentoypes
 at linked markers are used for imputing missing or correcting erroneous
 genotypes.
 
-Now we can run the pipeline.
+Now we can perform a preliminary run of the pipeline.
 We'll specify that we don't want to include the parents or doubled haploid
 lines in the estimation of allele frequencies or evaluation of genotype
-frequenecies (`excludeTaxa` argument). The
+frequencies (`excludeTaxa` argument). The
 `allowedDeviation` argument indicates how different the apparent
 allele frequency (based on read depth ratios) can be from an expected
 allele frequency (determined based on ploidy and mapping population type) 
 and still be classified as that allele frequency. The default settings assume an
 F1 population, but the population type can be adjusted using the
 `n.gen.backcrossing`, `n.gen.intermating`, and
-`n.gen.selfing` arguments.
+`n.gen.selfing` arguments.  We'll also lower `minLikelihoodRatio` from the
+default because one of the parents has many uncertain genotypes under the
+tetraploid model (which was determined by exploration of the dataset outside
+of this tutorial; many NA values were observed in `priorProb` under the 
+default). Since this first run is for a rough estimate of
+genotypes, we'll set `useLinkage = FALSE` to save a little computational time.
+
+```{r}
+mydata2 <- PipelineMapping2Parents(mydata, 
+                                  freqExcludeTaxa = c("Kaskade-Justin", 
+                                                      "Zebrinus-Justin",
+                                                     "IGR-2011-001",
+                                                     "p196-150A-c", 
+                                                     "p877-348-b"),
+                                  freqAllowedDeviation = 0.06,
+                                  useLinkage = FALSE,
+                                  minLikelihoodRatio = 2)
+```
+
+We can use these preliminary estimates to determine whether we need to adjust
+the overdispersion parameter.  Exactly how much does read depth distribution
+deviate from what would be expected under binomial distibution?  The 
+`TestOverdispersion` function will help us here.  We will use the `qqman`
+package to visualize the results.
+
+```{r message = FALSE}
+library(qqman)
+overdispersionP <- TestOverdispersion(mydata2, to_test = 6:10)
+qq(overdispersionP[["6"]])
+qq(overdispersionP[["7"]])
+qq(overdispersionP[["8"]])
+qq(overdispersionP[["9"]])
+qq(overdispersionP[["10"]])
+```
+
+It looks like `9` follows the red line most closely, so we'll use that for the
+overdispersion parameter.  Now we can re-run the pipeline to properly call the
+genotypes.
 
 ```{r}
 mydata <- PipelineMapping2Parents(mydata, 
@@ -174,7 +214,8 @@ mydata <- PipelineMapping2Parents(mydata,
                                                      "p196-150A-c", 
                                                      "p877-348-b"),
                                   freqAllowedDeviation = 0.06,
-                                  useLinkage = TRUE)
+                                  useLinkage = TRUE, overdispersion = 9,
+                                  minLikelihoodRatio = 2)
 ```
 
 We can examine the allele frequencies.
@@ -190,18 +231,18 @@ genotype at each locus, taxon, and ploidy.  This is the probability
 of seeing the observed distribution of reads.
 
 ```{r}
-mydata$alleleDepth[3,11:20]
-mydata$genotypeLikelihood[[1]][,3,11:20]
-mydata$genotypeLikelihood[[2]][,3,11:20]
+mydata$alleleDepth[10,19:26]
+mydata$genotypeLikelihood[[1]][,10,19:26]
+mydata$genotypeLikelihood[[2]][,10,19:26]
 ```
 
-Above, for one individal (Map1-001), we see its read depth at the
-first ten alleles (first five loci), followed by the genotype likelihoods
-under diploid and tetraploid models.  For example, at locus TP26698, 
+Above, for one individal (Map1-018), we see its read depth at
+eight alleles (four loci), followed by the genotype likelihoods
+under diploid and tetraploid models.  For example, at locus TP35570, 
 heterozygosity is the most likely state, although there is a chance that
-this individual is homozygous for allele 1 and the one read of allele 0
-was due to contamination.  If this locus is allotetraploid, it is most
-likely that there is one copy of allele 0 and three copies of allele 1.
+this individual is homozygous for allele 0 and the four reads of allele 1
+were due to contamination.  If this locus is allotetraploid, it is most
+likely that there is one copy of allele 1 and three copies of allele 0.
 Other loci have higher depth and as a result there is less uncertainty
 in the genotype, particularly for the diploid model.
 
@@ -212,16 +253,17 @@ can be ignored by increasing the `minLikelihoodRatio` argument to
 `PipelineMapping2Parents`.
 
 ```{r}
-mydata$priorProb[[1]][,11:20]
-mydata$priorProb[[2]][,11:20]
+mydata$priorProb[[1]][,19:26]
+mydata$priorProb[[2]][,19:26]
 ```
 
 Here we see some pretty big differences under the diploid and
-allotetraploid models.  For example, if TP28405 is behaving in a diploid
+allotetraploid models.  For example, if TP35570 is behaving in a diploid
 fashion we expect F2-like segregation since both parents were 
-heterozygous.  However, if TP28405 is behaving in an allotetraploid
-fashion, we expect that both parents are homozygous at differing 
-paralogous loci, resulting in no segregation.
+heterozygous.  However, if TP35570 is behaving in an allotetraploid
+fashion, a 1:1 segregation ratio is expected due to one parent being
+heterozygous at one isolocus and the other being homozygous at both
+isoloci.
 
 Now we want to determine which ploidy is the best fit for each locus.
 This is done by comparing genotype prior probabilities to
@@ -229,7 +271,7 @@ genotype likelihoods and estimating a $\chi^2$ statistic.  Lower
 values indicate a better fit.
 
 ```{r}
-mydata$ploidyChiSq[,11:20]
+mydata$ploidyChiSq[,19:26]
 ```
 
 We can make a plot to get an overall sense of how well the markers
@@ -250,25 +292,26 @@ Now we'll examine the posterior genotype probabilities.  These are still
 estimated separately for each ploidy.
 
 ```{r}
-mydata$posteriorProb[[1]][,3,11:20]
-mydata$posteriorProb[[2]][,3,11:20]
+mydata$posteriorProb[[1]][,10,19:26]
+mydata$posteriorProb[[2]][,10,19:26]
 ```
 
 We can export the results for use in downstream analysis.  The function
 below weights possible ploidies for each allele based on the results
 in `mydata$ploidyChiSq`, and for each taxon outputs a continuous,
 numerical genotype that is the mean of all possible genotypes weighted
-by genotype posterior probabilities.  By default, one allele per locus
+by genotype posterior probabilities (*i.e.* the posterior mean genotype).
+By default, one allele per locus
 is discarded in order to avoid mathematical singularities in downstream
 analysis.  The continuous genotypes also range from zero to one by default,
 which can be changed with the `minval` and `maxval` arguments.
 
 ```{r}
 mywm <- GetWeightedMeanGenotypes(mydata)
-mywm[c(297,2:6), 6:10]
+mywm[c(297,2:6), 10:13]
 ```
 
-Note that the parent weighted mean genotypes were estimated using 
+Note that the parent posterior mean genotypes were estimated using 
 gentoype likelihood only, ignoring the priors set for the progeny.  In 
 some places they may not match the progeny genotypes, indicating a
 likely error in parental genotype calling.  We can see the parental
@@ -276,8 +319,8 @@ genotypes that were used for estimating progeny priors using
 `$likelyGeno_donor` and `$likelyGeno_recurrent`.
 
 ```{r}
-mydata$likelyGeno_donor[,11:20]
-mydata$likelyGeno_recurrent[,11:20]
+mydata$likelyGeno_donor[,19:26]
+mydata$likelyGeno_recurrent[,19:26]
 ```
 
 ## Estimating genotype probabilities in a diversity panel <a name="diversity"></a>
@@ -324,6 +367,18 @@ mydata <- VCF2RADdata(myVCF, possiblePloidies = list(2, c(2,2)),
 mydata
 ```
 
+For natural populations and diversity panels, we can run `TestOverdispersion`
+before performing any genotype calling.
+
+```{r}
+overdispersionP <- TestOverdispersion(mydata, to_test = 8:10)
+qq(overdispersionP[["8"]])
+qq(overdispersionP[["9"]])
+qq(overdispersionP[["10"]])
+```
+
+Again, nine looks like a good value.
+
 We can iteratively estimate genotype probabilities assuming 
 Hardy-Weinberg equilibrium.  The argument `tol` is set to a higher
 value than the default here in order to help the tutorial run more quickly.
@@ -331,7 +386,7 @@ Since *Miscanthus* is highly outcrossing, we will leave the `selfing.rate`
 argument at its default of zero.
 
 ```{r message = FALSE}
-mydataHWE <- IterateHWE(mydata, tol = 1e-3)
+mydataHWE <- IterateHWE(mydata, tol = 1e-3, overdispersion = 9)
 ```
 
 Let's take a look at allele frequencies:
@@ -354,7 +409,8 @@ setting a seed so that the vignette always renders in the same way.
 
 ```{r message = FALSE}
 set.seed(3908)
-mydataPopStruct <- IteratePopStruct(mydata, nPcsInit = 8, tol = 5e-03)
+mydataPopStruct <- IteratePopStruct(mydata, nPcsInit = 8, tol = 5e-03,
+                                    overdispersion = 9)
 ```
 
 Allele frequency estimates have changed slightly:
@@ -379,13 +435,13 @@ allele frequency.
 
 ```{r}
 myallele <- 1
-freqcol <- rainbow(101)[round(mydataPopStruct$alleleFreqByTaxa[,myallele] * 100) + 1]
+freqcol <- heat.colors(101)[round(mydataPopStruct$alleleFreqByTaxa[,myallele] * 100) + 1]
 plot(mydataPopStruct$PCA[,1], mydataPopStruct$PCA[,2],
      xlab = "PC axis 1", ylab = "PC axis 2", pch = 21,
      bg = freqcol)
 ```
 
-As before, we can export the weighted mean genotypes for downstream analysis.
+As before, we can export the posterior mean genotypes for downstream analysis.
 
 ```{r}
 wmgenoPopStruct <- GetWeightedMeanGenotypes(mydataPopStruct)
@@ -402,7 +458,7 @@ update priors based on genotypes at linked loci.
 `RADdata` objects contain large matrices and arrays for storing read depth
 and the parameters that are estimated by the pipeline functions, and as a 
 result require a lot of RAM (computer memory) in comparison to
-the weighted mean genotypes that are exported.
+the posterior mean genotypes that are exported.
 A `RADdata` object that has just been imported will take up less RAM than one
 that has been processed by a pipeline function.  `RADdata` objects will also
 take up more RAM (and take longer for pipeline functions to process) if they
@@ -416,7 +472,7 @@ will create separate `RADdata` objects by chromosomes or groups of
 chromosomes, and will save those objects to separate R workspace (.RData)
 files on your hard drive.  You can then run a loop to re-import those 
 objects one at a time, process each one with a pipeline function, and export
-weighted mean geneotypes (or any other parameters you wish to keep) to a
+posterior mean geneotypes (or any other parameters you wish to keep) to a
 file or a smaller R object.  If you have access to a high performance 
 computing cluster, you may instead wish to process individual chromosomes
 as parallel jobs.
@@ -426,6 +482,9 @@ divide them up some other way than by chromosome, see `SubsetByLocus`.
 If you are importing from VCF but don't want to import the whole genome at
 once, see the examples on the help page for `VCF2RADdata` for how to
 import just a particular genomic region.
+
+You might use `SubsetByLocus` and select a random subset of ~1000 loci to use
+with `TestOverdispersion` for estimating the overdispersion parameter.
 
 If you are using one of the iterative pipelines, it is possible to set the
 `tol` argument higher in order to reduce processing time at the

@@ -59,8 +59,9 @@ RADdata <- function(alleleDepth, alleles2loc, locTable, possiblePloidies,
   
   expandedLocDepth <- locDepth[,as.character(alleles2loc), drop = FALSE]
   
-  # get number of permutations of order in which each allele could have been sampled from total depth from that locus
-  depthSamplingPermutations <- choose(expandedLocDepth, alleleDepth)
+  # get log of number of permutations of order in which each allele could have
+  # been sampled from total depth from that locus.
+  depthSamplingPermutations <- lchoose(expandedLocDepth, alleleDepth)
   dimnames(depthSamplingPermutations)[[2]] <- dimnames(alleleDepth)[[2]]
   # for each allele and taxon, get proportion of reads for that locus
   depthRatio <- alleleDepth/expandedLocDepth
@@ -208,16 +209,20 @@ AddAlleleFreqHWE.RADdata <- function(object, excludeTaxa = GetBlankTaxa(object),
 AddGenotypeLikelihood <- function(object, ...){
   UseMethod("AddGenotypeLikelihood", object)
 }
-AddGenotypeLikelihood.RADdata <- function(object, ...){
+AddGenotypeLikelihood.RADdata <- function(object, overdispersion = 9, ...){
   if(is.null(object$alleleFreq)){
-    cat("Allele frequencies not found; estimating under HWE from depth ratios.",
-        sep = "\n")
+    message("Allele frequencies not found; estimating under HWE from depth ratios.")
     object <- AddAlleleFreqHWE(object)
   }
   alFreq <- object$alleleFreq
   
   # get ploidies, ignoring inheritance pattern
   ploidies <- sort(unique(sapply(object$possiblePloidies, sum)))
+  # fix any allele freq that are zero, to prevent NaN likelihood
+  minfreq <- 1/nTaxa(object)/max(ploidies)
+  alFreq[alFreq == 0] <- minfreq
+  alFreq[alFreq == 1] <- 1 - minfreq
+  
   # set up list for genotype likelihoods and loop through
   object$genotypeLikelihood <- list()
   length(object$genotypeLikelihood) <- length(ploidies)
@@ -232,6 +237,9 @@ AddGenotypeLikelihood.RADdata <- function(object, ...){
       alleleProb[j,] <- sampleReal[j] + sampleContam
     }
     antiAlleleProb <- 1 - alleleProb
+    # multiply probabilities by overdispersion factor for betabinomial
+    alleleProb <- alleleProb * overdispersion
+    antiAlleleProb <- antiAlleleProb * overdispersion
     
     # get likelihoods
     object$genotypeLikelihood[[i]] <- array(0, dim = c(ploidies[i]+1, 
@@ -240,41 +248,20 @@ AddGenotypeLikelihood.RADdata <- function(object, ...){
                                                        GetTaxa(object),
                                                        GetAlleleNames(object)))
     for(j in 1:(ploidies[i]+1)){
+      # likelihoods under beta-binomial distribution
       object$genotypeLikelihood[[i]][j,,] <- 
-        object$depthSamplingPermutations * 
-          AlleleProbExp(object$alleleDepth, alleleProb[j,]) * 
-            AlleleProbExp(object$antiAlleleDepth, antiAlleleProb[j,]) # Rcpp function
-#          t(apply(object$alleleDepth, 1, function(x) alleleProb[j,] ^ x) * 
-#            apply(object$antiAlleleDepth, 1, function(x) antiAlleleProb[j,] ^ x)) # non-C version of above two lines
-      # when depth is too high, use dbinom instead.
-      toRecalculate <- which(is.na(object$genotypeLikelihood[[i]][j,,]) |
-                               object$genotypeLikelihood[[i]][j,,] == Inf,
-                             arr.ind = TRUE)
-      if(dim(toRecalculate)[1] == 0) next
-      for(k in 1:dim(toRecalculate)[1]){
-        # note repetitive code below
-        taxon <- toRecalculate[k,1]
-        allele <- toRecalculate[k,2]
-        object$genotypeLikelihood[[i]][j,taxon,allele] <-
-          dbinom(object$alleleDepth[taxon,allele],
-                 object$locDepth[taxon, as.character(object$alleles2loc[allele])],
-                 alleleProb[j,allele])
-      }
+        exp(object$depthSamplingPermutations +
+        sweep(lbeta(sweep(object$alleleDepth, 2, alleleProb[j,], "+"),
+                    sweep(object$antiAlleleDepth, 2, antiAlleleProb[j,], "+")),
+              2, lbeta(alleleProb[j,], antiAlleleProb[j,]), "-"))
     }
     # fix likelihoods where all are zero
     totlik <- colSums(object$genotypeLikelihood[[i]])
     toRecalculate <- which(totlik == 0, arr.ind = TRUE)
     if(dim(toRecalculate)[1] > 0){
       for(k in 1:dim(toRecalculate)[1]){
-        for(j in 1:(ploidies[i] + 1)){
-          # note repetitive code from just above
-          taxon <- toRecalculate[k,1]
-          allele <- toRecalculate[k,2]
-          object$genotypeLikelihood[[i]][j,taxon,allele] <-
-            dbinom(object$alleleDepth[taxon,allele],
-                   object$locDepth[taxon, as.character(object$alleles2loc[allele])],
-                   alleleProb[j,allele])
-        }
+        taxon <- toRecalculate[k,1]
+        allele <- toRecalculate[k,2]
         # for rare cases where likelihood still not estimated, set to one
         if(sum(object$genotypeLikelihood[[i]][, taxon, allele]) == 0){
           object$genotypeLikelihood[[i]][, taxon, allele] <- 1
@@ -601,6 +588,25 @@ AddGenotypePriorProb_HWE.RADdata <- function(object, selfing.rate = 0, ...){
   return(object)
 }
 
+AddGenotypePriorProb_Even <- function(object, ...){
+  UseMethod("AddGenotypePriorProb_Even", object)
+}
+AddGenotypePriorProb_Even.RADdata <- function(object, ...){
+  priors <- list()
+  length(priors) <- length(object$possiblePloidies)
+  for(i in 1:length(priors)){
+    thispld <- sum(object$possiblePloidies[[i]])
+    priors[[i]] <- matrix(1/(thispld + 1), nrow = thispld + 1, 
+                          ncol = nAlleles(object),
+                          dimnames = list(as.character(0:thispld),
+                                          GetAlleleNames(object)))
+  }
+  object$priorProb <- priors
+  object$priorProbPloidies <- object$possiblePloidies
+  attr(object, "priorType") <- "population"
+  return(object)
+}
+
 AddPloidyLikelihood <- function(object, ...){
   UseMethod("AddPloidyLikelihood", object)
 }
@@ -908,8 +914,23 @@ AddPCA.RADdata <- function(object, nPcsInit = 10, maxR2changeratio = 0.05,
   
   # replace NaN with NA
   genmat[is.na(genmat)] <- NA
-  # remove non-variable sites
+  # check that no columns are completely NA
+  if(any(colMeans(is.na(genmat)) == 1)){
+    message("Alleles with completely missing data:")
+    cat(colnames(genmat)[colMeans(is.na(genmat)) == 1], sep = "\n")
+    stop("Alleles found with completely missing data.")
+  }
+  
   genfreq <- colMeans(genmat, na.rm = TRUE)
+  # if any individuals are completely missing, fill them in with mean.
+  # This can happen with blanks or very low quality samples when looping
+  # through the genome in chunks.
+  missind <- which(rowMeans(is.na(genmat)) == 1)
+  for(i in missind){
+    genmat[i,] <- genfreq
+  }
+  
+  # remove non-variable sites
   genmat <- genmat[, which(genfreq > 0 & genfreq < 1)]
   
   # adjust number of PC axes if necessary
@@ -1090,8 +1111,8 @@ AddGenotypePriorProb_LD.RADdata <- function(object, type, ...){
               # If there are only two possible genotypes for each, we know that all
               # copies of alleles are linked and can treat them that way.
               newpost[possibleThisAllele,progeny,i] <- 
-                thispost[possibleLinked,progeny,i] * atab$corr[i] +
-                0.5 * (1 - atab$corr[i])
+                thispost[possibleLinked,progeny,i] * atab$corr[i]^2 +
+                0.5 * (1 - atab$corr[i]^2)
             } else {
               # If any allele has more than two genotypes, we aren't sure of
               # complete phasing.
@@ -1114,9 +1135,9 @@ AddGenotypePriorProb_LD.RADdata <- function(object, type, ...){
           thispost <- newpost
         } else { # for hwe or pop structure situations
           # multiply by correlation coefficient
-          thispost <- sweep(thispost, 3, atab$corr, "*")
+          thispost <- sweep(thispost, 3, atab$corr^2, "*")
           # add even priors for the remainder of the coefficient
-          thispost <- sweep(thispost, 3, (1 - atab$corr)/ngen, "+")
+          thispost <- sweep(thispost, 3, (1 - atab$corr^2)/ngen, "+")
         }
         
         # multiply across alleles to get priors
@@ -1143,6 +1164,9 @@ AddAlleleLinkages.RADdata <- function(object, type, linkageDist, minCorr,
                                       excludeTaxa = character(0), ...){
   if(!type %in% c("mapping", "hwe", "popstruct")){
     stop("type must be 'mapping', 'hwe', or 'popstruct'.")
+  }
+  if(minCorr < 0){
+    stop("minCorr for linkage disequilibrium cannot be negative.")
   }
   # get weighted mean genotypes for doing correlations
   wmgeno <- GetWeightedMeanGenotypes(object, omit1allelePerLocus = FALSE)
@@ -1193,6 +1217,65 @@ AddAlleleLinkages.RADdata <- function(object, type, linkageDist, minCorr,
   
   return(object)
 } # end of AddAlleleLinkages function
+
+## The functions AddNormalizedDepthProp and AddAlleleBias are not currently
+## used in polyRAD, but may be incorporated into future pipelines.
+# Function to get a normalized proportion of reads belonging to each allele
+# at each locus.
+AddNormalizedDepthProp <- function(object, ...){
+  UseMethod("AddNormalizedDepthProp", object)
+}
+AddNormalizedDepthProp.RADdata <- function(object, ...){
+  # get the total number of reads per individual
+  depthPerInd <- rowSums(object$locDepth)
+  # get proportion of total reads for a taxon belonging to each allele
+  propDepthAl <- sweep(object$alleleDepth, 1, depthPerInd, "/")
+  totAl <- colSums(propDepthAl, na.rm = TRUE)
+  # get proportion of total reads for a taxon belonging to other alleles at locus
+  propDepthAnti <- sweep(object$antiAlleleDepth, 1, depthPerInd, "/")
+  totAnti <- colSums(propDepthAnti, na.rm = TRUE)
+  # get normalized proportion of reads for a locus belonging to an allele
+  object$normalizedDepthProp <- totAl/(totAl + totAnti)
+  
+  return(object)
+}
+# function to estimate bias of each allele at each locus
+# equivalent to h in Gerard et al. (2018)
+AddAlleleBias <- function(object, ...){
+  UseMethod("AddAlleleBias", object)
+}
+AddAlleleBias.RADdata <- function(object, maxbias = 4, ...){
+  if(is.null(object$normalizedDepthProp)){
+    object <- AddNormalizedDepthProp(object)
+  }
+  
+  # estimate bias directly from data
+  bias <- ((1 - object$normalizedDepthProp)/(1 - object$alleleFreq))/
+    (object$normalizedDepthProp / object$alleleFreq)
+  
+  # # total depth per locus
+  # locdepth <- colSums(object$alleleDepth + object$antiAlleleDepth)
+  # # normalized total depth per allele
+  # normdepth <- round(object$normalizedDepthProp * locdepth)
+  # # probability of seeing apparent bias that extreme if there is no bias
+  # p_no_bias <- numeric(length(bias))
+  # biaspos <- object$normalizedDepthProp > object$alleleFreq
+  # p_no_bias[biaspos] <- pbinom(normdepth[biaspos], locdepth[biaspos],
+  #                              object$alleleFreq[biaspos], lower.tail = FALSE)
+  # p_no_bias[!biaspos] <- pbinom(normdepth[!biaspos], locdepth[!biaspos],
+  #                              object$alleleFreq[!biaspos], lower.tail = TRUE)
+  # 
+  # # correct bias based on that probability
+  # ## (this might not be the best method; set prior instead?)
+  # corr_log_bias <- log(bias) * (1 - p_no_bias)
+  # object$alleleBias <- exp(corr_log_bias)
+  # object$alleleBias[object$alleleBias > maxbias] <- maxbias
+  # object$alleleBias[object$alleleBias < 1/maxbias] <- 1/maxbias
+  
+  object$alleleBias <- bias
+  
+  return(object)
+}
 
 #### Accessors ####
 GetTaxa <- function(object, ...){
@@ -1697,7 +1780,7 @@ MergeRareHaplotypes.RADdata <- function(object, min.ind.with.haplotype = 10,
       object$depthRatio[,alToMerge] <- 
         object$depthRatio[,alToMerge] + object$depthRatio[,thisAl]
       object$depthSamplingPermutations[,alToMerge] <-
-        choose(object$locDepth[,as.character(L)], object$alleleDepth[,alToMerge])
+        lchoose(object$locDepth[,as.character(L)], object$alleleDepth[,alToMerge])
       Nindwithal[alToMerge] <- Nindwithal[alToMerge] + Nindwithal[thisAl]
       # merge nucleotides
       newNt <- .mergeNucleotides(object$alleleNucleotides[[alToMerge]],
@@ -1735,11 +1818,48 @@ MergeRareHaplotypes.RADdata <- function(object, min.ind.with.haplotype = 10,
 RemoveMonomorphicLoci <- function(object, ...){
   UseMethod("RemoveMonomorphicLoci", object)
 }
-RemoveMonomorphicLoci.RADdata <- function(object, ...){
+RemoveMonomorphicLoci.RADdata <- function(object, verbose = TRUE, ...){
   alleleTally <- table(object$alleles2loc)
   locToKeep <- as.integer(names(alleleTally)[alleleTally > 1])
   
+  if(verbose){
+    message(paste(length(locToKeep), "markers retained out of", nLoci(object),
+                  "originally."))
+  }
+  
   object <- SubsetByLocus(object, locToKeep)
+  
+  return(object)
+}
+
+# Function to remove high-depth markers (likely paralogs)
+RemoveHighDepthLoci <- function(object, ...){
+  UseMethod("RemoveHighDepthLoci", object)
+}
+RemoveHighDepthLoci.RADdata <- function(object, max.SD.above.mean = 2,
+                                        verbose = TRUE, ...){
+  # get total depth for each locus
+  totdepth <- colSums(object$locDepth)
+  stopifnot(all(!is.na(totdepth))) # there should never be NA values
+  # mean and SD for depth
+  meandepth <- mean(totdepth)
+  sddepth <- sd(totdepth)
+  # identify markers to keep
+  cutoff <- meandepth + max.SD.above.mean * sddepth
+  tokeep <- as.integer(names(totdepth)[totdepth <= cutoff])
+  # subset object
+  object <- SubsetByLocus(object, tokeep)
+  
+  if(verbose){
+    message(paste(length(tokeep), "markers retained out of", length(totdepth),
+                  "originally."))
+    graphics::hist(totdepth/nTaxa(object), col = "lightgrey",
+                   main = "Histogram of mean read depth", xlab = "Depth")
+    graphics::abline(v = cutoff/nTaxa(object), col = "blue")
+    graphics::text("Cutoff", x = cutoff/nTaxa(object), 
+                   y = mean(graphics::par("yaxp")[1:2]),
+                   col = "blue", pos = 2, srt = 90)
+  }
   
   return(object)
 }

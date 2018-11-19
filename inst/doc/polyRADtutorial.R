@@ -29,6 +29,26 @@ mydata$locTable$Pos <- aligndata[GetLoci(mydata), 2]
 head(mydata$locTable)
 
 ## ------------------------------------------------------------------------
+mydata2 <- PipelineMapping2Parents(mydata, 
+                                  freqExcludeTaxa = c("Kaskade-Justin", 
+                                                      "Zebrinus-Justin",
+                                                     "IGR-2011-001",
+                                                     "p196-150A-c", 
+                                                     "p877-348-b"),
+                                  freqAllowedDeviation = 0.06,
+                                  useLinkage = FALSE,
+                                  minLikelihoodRatio = 2)
+
+## ----message = FALSE-----------------------------------------------------
+library(qqman)
+overdispersionP <- TestOverdispersion(mydata2, to_test = 6:10)
+qq(overdispersionP[["6"]])
+qq(overdispersionP[["7"]])
+qq(overdispersionP[["8"]])
+qq(overdispersionP[["9"]])
+qq(overdispersionP[["10"]])
+
+## ------------------------------------------------------------------------
 mydata <- PipelineMapping2Parents(mydata, 
                                   freqExcludeTaxa = c("Kaskade-Justin", 
                                                       "Zebrinus-Justin",
@@ -36,22 +56,23 @@ mydata <- PipelineMapping2Parents(mydata,
                                                      "p196-150A-c", 
                                                      "p877-348-b"),
                                   freqAllowedDeviation = 0.06,
-                                  useLinkage = TRUE)
+                                  useLinkage = TRUE, overdispersion = 9,
+                                  minLikelihoodRatio = 2)
 
 ## ------------------------------------------------------------------------
 table(mydata$alleleFreq)
 
 ## ------------------------------------------------------------------------
-mydata$alleleDepth[3,11:20]
-mydata$genotypeLikelihood[[1]][,3,11:20]
-mydata$genotypeLikelihood[[2]][,3,11:20]
+mydata$alleleDepth[10,19:26]
+mydata$genotypeLikelihood[[1]][,10,19:26]
+mydata$genotypeLikelihood[[2]][,10,19:26]
 
 ## ------------------------------------------------------------------------
-mydata$priorProb[[1]][,11:20]
-mydata$priorProb[[2]][,11:20]
+mydata$priorProb[[1]][,19:26]
+mydata$priorProb[[2]][,19:26]
 
 ## ------------------------------------------------------------------------
-mydata$ploidyChiSq[,11:20]
+mydata$ploidyChiSq[,19:26]
 
 ## ------------------------------------------------------------------------
 plot(mydata$ploidyChiSq[1,], mydata$ploidyChiSq[2,], 
@@ -60,16 +81,16 @@ plot(mydata$ploidyChiSq[1,], mydata$ploidyChiSq[2,],
 abline(a = 0, b = 1, col = "red")
 
 ## ------------------------------------------------------------------------
-mydata$posteriorProb[[1]][,3,11:20]
-mydata$posteriorProb[[2]][,3,11:20]
+mydata$posteriorProb[[1]][,10,19:26]
+mydata$posteriorProb[[2]][,10,19:26]
 
 ## ------------------------------------------------------------------------
 mywm <- GetWeightedMeanGenotypes(mydata)
-mywm[c(297,2:6), 6:10]
+mywm[c(297,2:6), 10:13]
 
 ## ------------------------------------------------------------------------
-mydata$likelyGeno_donor[,11:20]
-mydata$likelyGeno_recurrent[,11:20]
+mydata$likelyGeno_donor[,19:26]
+mydata$likelyGeno_recurrent[,19:26]
 
 ## ----message=FALSE, warning=FALSE----------------------------------------
 library(VariantAnnotation)
@@ -85,15 +106,22 @@ mydata <- VCF2RADdata(myVCF, possiblePloidies = list(2, c(2,2)),
                       expectedLoci = 100, expectedAlleles = 500)
 mydata
 
+## ------------------------------------------------------------------------
+overdispersionP <- TestOverdispersion(mydata, to_test = 8:10)
+qq(overdispersionP[["8"]])
+qq(overdispersionP[["9"]])
+qq(overdispersionP[["10"]])
+
 ## ----message = FALSE-----------------------------------------------------
-mydataHWE <- IterateHWE(mydata, tol = 1e-3)
+mydataHWE <- IterateHWE(mydata, tol = 1e-3, overdispersion = 9)
 
 ## ------------------------------------------------------------------------
 hist(mydataHWE$alleleFreq, breaks = 20)
 
 ## ----message = FALSE-----------------------------------------------------
 set.seed(3908)
-mydataPopStruct <- IteratePopStruct(mydata, nPcsInit = 8, tol = 5e-03)
+mydataPopStruct <- IteratePopStruct(mydata, nPcsInit = 8, tol = 5e-03,
+                                    overdispersion = 9)
 
 ## ------------------------------------------------------------------------
 hist(mydataPopStruct$alleleFreq, breaks = 20)
@@ -104,7 +132,7 @@ plot(mydataPopStruct$PCA[,1], mydataPopStruct$PCA[,2],
 
 ## ------------------------------------------------------------------------
 myallele <- 1
-freqcol <- rainbow(101)[round(mydataPopStruct$alleleFreqByTaxa[,myallele] * 100) + 1]
+freqcol <- heat.colors(101)[round(mydataPopStruct$alleleFreqByTaxa[,myallele] * 100) + 1]
 plot(mydataPopStruct$PCA[,1], mydataPopStruct$PCA[,2],
      xlab = "PC axis 1", ylab = "PC axis 2", pch = 21,
      bg = freqcol)

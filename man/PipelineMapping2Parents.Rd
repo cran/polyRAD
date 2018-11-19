@@ -22,7 +22,7 @@ PipelineMapping2Parents(object, n.gen.backcrossing = 0,
                                             GetRecurrentParent(object), 
                                             GetBlankTaxa(object)),
                         useLinkage = TRUE, linkageDist = 1e7,
-                        minLinkageCorr = 0.5)
+                        minLinkageCorr = 0.5, overdispersion = 9)
 }
 \arguments{
   \item{object}{
@@ -52,7 +52,7 @@ inheritance modes that could be observed among loci in the recurrent
 parent.
 }
   \item{minLikelihoodRatio}{
-The minimum likelihood ration for determining parental genotypes with
+The minimum likelihood ratio for determining parental genotypes with
 confidence, to be passed to \code{\link{GetLikelyGen}} for both
 parental taxa.
 }
@@ -79,6 +79,9 @@ coeffienct between weighted mean genotypes at two alleles in order for linkage
 data to be used for updating genotype priors. Ignored if 
 \code{useLinkage = FALSE}.
 }
+\item{overdispersion}{
+Overdispersion parameter; see \code{\link{AddGenotypeLikelihood}}.
+}
 }
 \details{
 Unlike \code{\link{IterateHWE}} and \code{\link{IteratePopStruct}},
@@ -98,8 +101,11 @@ Lindsay V. Clark
 }
 
 \seealso{
-\code{\link{GetWeightedMeanGenotypes}} for exporting genotypes from 
-the resulting object.
+\code{\link{SetDonorParent}} and \code{SetRecurrentParent} to indicate which
+individuals are the parents before running the function.
+
+\code{\link{GetWeightedMeanGenotypes}} or \code{\link{Export_polymapR}} for
+exporting genotypes from the resulting object.
 
 \code{\link{StripDown}} to remove memory-hogging slots that are no longer
 needed after the pipeline has been run.
