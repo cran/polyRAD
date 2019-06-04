@@ -1,3 +1,18 @@
+## Changes in v1.1 ##
+
+A plot method has been added for RADdata objects.
+
+The MergeTaxaDepth, RemoveUngenotypedLoci, and SubsetByPloidy utility functions
+have been added.
+
+The Export_MAPpoly and Export_GWASpoly functions have been added.
+
+Bug fixes have been made in TestOverdispersion, VCF2RADdata, SubsetByLocus,
+and SubsetByTaxon.
+
+Some code in AddAlleleFreqByTaxa has been translated to Rcpp to speed
+computation time for IteratePopStruct and IteratePopStructLD.
+
 ## Changes in v1.0 ##
 
 Genotype likelihoods are now estimated under a beta-binomial distribution 

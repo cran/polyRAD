@@ -78,8 +78,8 @@ If a subset is provided, filtering with \code{min.ind.with.reads} and
 if a different \code{samples} argument is provided within \code{svparam}.
 }
   \item{svparam}{
-A \code{\link[VariantAnnotation]{ScanVcfParam}} object to be used with 
-\code{\link[VariantAnnotation]{readVcf}}.  The primary
+A \code{\link[VariantAnnotation:ScanVcfParam-class]{ScanVcfParam}} object to be
+used with \code{\link[VariantAnnotation:readVcf-methods]{readVcf}}.  The primary
 reasons to change this from the default would be 1) if you want additional
 FIXED or INFO fields from the file to be exported to the \code{locTable}
 slot of the \code{RADdata} object, and/or 2) if you only want to import
@@ -136,6 +136,8 @@ Variant Call Format specification: \url{http://samtools.github.io/hts-specs/}
 TASSEL GBSv2 pipeline: \url{https://bitbucket.org/tasseladmin/tassel-5-source/wiki/Tassel5GBSv2Pipeline}
 
 GATK: \url{https://software.broadinstitute.org/gatk/}
+
+Tassel4-Poly: \url{https://github.com/guilherme-pereira/tassel4-poly}
 }
 \author{
 Lindsay V. Clark

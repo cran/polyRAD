@@ -5,6 +5,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 6)
 library(polyRAD)
 maphmcfile <- system.file("extdata", "ClareMap_HapMap.hmc.txt", 
                           package = "polyRAD")
+maphmcfile
 
 mydata <- readHMC(maphmcfile,
                   possiblePloidies = list(2, c(2, 2)))
@@ -28,18 +29,35 @@ mydata$locTable$Chr <- aligndata[GetLoci(mydata), 1]
 mydata$locTable$Pos <- aligndata[GetLoci(mydata), 2]
 head(mydata$locTable)
 
+## ----eval = FALSE--------------------------------------------------------
+#  mydata <- AddPCA(mydata)
+
+## ------------------------------------------------------------------------
+load(system.file("extdata", "examplePCA.RData", package = "polyRAD"))
+mydata$PCA <- examplePCA
+
+## ------------------------------------------------------------------------
+plot(mydata)
+
+## ------------------------------------------------------------------------
+realprogeny <- GetTaxa(mydata)[mydata$PCA[,"PC1"] > -10 &
+                                 mydata$PCA[,"PC1"] < 10]
+# eliminate the one doubled haploid line in this group
+realprogeny <- realprogeny[!realprogeny %in% c("IGR-2011-001", "p196-150A-c",
+                                               "p877-348-b")]
+# also retain parents
+keeptaxa <- c(realprogeny, GetDonorParent(mydata), GetRecurrentParent(mydata))
+
+mydata <- SubsetByTaxon(mydata, taxa = keeptaxa)
+plot(mydata)
+
 ## ------------------------------------------------------------------------
 mydata2 <- PipelineMapping2Parents(mydata, 
-                                  freqExcludeTaxa = c("Kaskade-Justin", 
-                                                      "Zebrinus-Justin",
-                                                     "IGR-2011-001",
-                                                     "p196-150A-c", 
-                                                     "p877-348-b"),
-                                  freqAllowedDeviation = 0.06,
-                                  useLinkage = FALSE,
-                                  minLikelihoodRatio = 2)
+                                   freqAllowedDeviation = 0.06,
+                                   useLinkage = FALSE,
+                                   minLikelihoodRatio = 2)
 
-## ----message = FALSE-----------------------------------------------------
+## ----message = FALSE, warning = FALSE------------------------------------
 library(qqman)
 overdispersionP <- TestOverdispersion(mydata2, to_test = 6:10)
 qq(overdispersionP[["6"]])
@@ -50,11 +68,6 @@ qq(overdispersionP[["10"]])
 
 ## ------------------------------------------------------------------------
 mydata <- PipelineMapping2Parents(mydata, 
-                                  freqExcludeTaxa = c("Kaskade-Justin", 
-                                                      "Zebrinus-Justin",
-                                                     "IGR-2011-001",
-                                                     "p196-150A-c", 
-                                                     "p877-348-b"),
                                   freqAllowedDeviation = 0.06,
                                   useLinkage = TRUE, overdispersion = 9,
                                   minLikelihoodRatio = 2)
@@ -63,9 +76,9 @@ mydata <- PipelineMapping2Parents(mydata,
 table(mydata$alleleFreq)
 
 ## ------------------------------------------------------------------------
-mydata$alleleDepth[10,19:26]
-mydata$genotypeLikelihood[[1]][,10,19:26]
-mydata$genotypeLikelihood[[2]][,10,19:26]
+mydata$alleleDepth[8,19:26]
+mydata$genotypeLikelihood[[1]][,8,19:26]
+mydata$genotypeLikelihood[[2]][,8,19:26]
 
 ## ------------------------------------------------------------------------
 mydata$priorProb[[1]][,19:26]
@@ -78,15 +91,20 @@ mydata$ploidyChiSq[,19:26]
 plot(mydata$ploidyChiSq[1,], mydata$ploidyChiSq[2,], 
      xlab = "Chi-squared for diploid model",
      ylab = "Chi-squared for tetraploid model")
-abline(a = 0, b = 1, col = "red")
 
 ## ------------------------------------------------------------------------
 mydata$posteriorProb[[1]][,10,19:26]
 mydata$posteriorProb[[2]][,10,19:26]
 
 ## ------------------------------------------------------------------------
+mydata <- SubsetByPloidy(mydata, ploidies = list(2))
+
+## ------------------------------------------------------------------------
+mydata <- RemoveUngenotypedLoci(mydata)
+
+## ------------------------------------------------------------------------
 mywm <- GetWeightedMeanGenotypes(mydata)
-mywm[c(297,2:6), 10:13]
+round(mywm[c(276, 277, 1:5), 10:13], 3)
 
 ## ------------------------------------------------------------------------
 mydata$likelyGeno_donor[,19:26]
@@ -127,15 +145,12 @@ mydataPopStruct <- IteratePopStruct(mydata, nPcsInit = 8, tol = 5e-03,
 hist(mydataPopStruct$alleleFreq, breaks = 20)
 
 ## ------------------------------------------------------------------------
-plot(mydataPopStruct$PCA[,1], mydataPopStruct$PCA[,2],
-     xlab = "PC axis 1", ylab = "PC axis 2")
+plot(mydataPopStruct)
 
 ## ------------------------------------------------------------------------
 myallele <- 1
 freqcol <- heat.colors(101)[round(mydataPopStruct$alleleFreqByTaxa[,myallele] * 100) + 1]
-plot(mydataPopStruct$PCA[,1], mydataPopStruct$PCA[,2],
-     xlab = "PC axis 1", ylab = "PC axis 2", pch = 21,
-     bg = freqcol)
+plot(mydataPopStruct, pch = 21, bg = freqcol)
 
 ## ------------------------------------------------------------------------
 wmgenoPopStruct <- GetWeightedMeanGenotypes(mydataPopStruct)

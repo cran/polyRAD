@@ -465,13 +465,14 @@ consolidateSNPs <- function(alleleDepth, alleles2loc, locTable, alleleNucleotide
         thisName <- row.names(locTable)[chrset[currLocIn]]
         thisPos <- locTable$Pos[chrset[currLocIn]]
         thisSeq <- alleleNucleotides[alleles2loc == chrset[currLocIn]]
+        
+        # get proportion difference in depth between these two loci
+        diff <- sum(abs(rowSums(thisDepth) - rowSums(lastDepth))) / 
+          ((sum(thisDepth) + sum(lastDepth))/2)
       }
-
-      # get proportion difference in depth between these two loci
-      diff <- sum(abs(rowSums(thisDepth) - rowSums(lastDepth))) / 
-        ((sum(thisDepth) + sum(lastDepth))/2)
       
-      if(diff > tol || thisPos - lastPos + 1 > tagsize || currLocIn > length(chrset)){
+      if(length(chrset) == 1 || diff > tol || thisPos - lastPos + 1 > tagsize 
+         || currLocIn > length(chrset)){
         ## If these are different loci (either due to counts or distance)
         ## put the "last" data into the output, and make the new data the last.
         
@@ -487,11 +488,13 @@ consolidateSNPs <- function(alleleDepth, alleles2loc, locTable, alleleNucleotide
         locTableOut$Chr[currLocOut] <- thisChrom
         locTableOut$Pos[currLocOut] <- lastPos
         
-        # shift "this" locus to "last" locus
-        lastDepth <- thisDepth
-        lastName <- thisName
-        lastPos <- thisPos
-        lastSeq <- thisSeq
+        if(length(chrset) > 1){
+          # shift "this" locus to "last" locus
+          lastDepth <- thisDepth
+          lastName <- thisName
+          lastPos <- thisPos
+          lastSeq <- thisSeq
+        }
         
         # increment current allele and locus
         currAlOut <- currAlOut + thisNAl
@@ -628,7 +631,8 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
     VariantAnnotation::vcfFixed(svparam) <- 
       c(VariantAnnotation::vcfFixed(svparam), "ALT")
   }
-  if(is.na(VariantAnnotation::vcfGeno(svparam))){
+  if(length(VariantAnnotation::vcfGeno(svparam)) > 0 && 
+     is.na(VariantAnnotation::vcfGeno(svparam)[1])){
     stop("geno field must be provided in svparam.")
   }
   if(!identical(VariantAnnotation::vcfGeno(svparam), "AD")){
@@ -639,6 +643,12 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
   }
   if(!all(samples %in% VariantAnnotation::samples(VariantAnnotation::scanVcfHeader(file)))){
     stop("Not all samples given in argument found in file.")
+  }
+  if(length(samples) < min.ind.with.reads){
+    stop("Need to adjust min.ind.with.reads for number of samples in dataset.")
+  }
+  if(length(samples)/2 < min.ind.with.minor.allele){
+    stop("Need to adjust min.ind.with.minor.allele for number of samples in dataset.")
   }
   
   # determine what extra columns to add to locTable
@@ -968,8 +978,17 @@ readStacks <- function(allelesFile, matchesFolder, version = 2,
   
   # get all of the sstacks files to read
   sstacksFiles <- list.files(matchesFolder, "\\.matches\\.tsv")
+  if(length(sstacksFiles) == 0){
+    stop("No .matches.tsv files found.")
+  }
   sampleNames <- sub("\\.matches\\.tsv(\\.gz)?$", "", sstacksFiles)
   sstacksFiles <- file.path(matchesFolder, sstacksFiles)
+  if(length(sampleNames) < min.ind.with.reads){
+    stop("Need to adjust min.ind.with.reads for number of samples in dataset.")
+  }
+  if(length(sampleNames)/2 < min.ind.with.minor.allele){
+    stop("Need to adjust min.ind.with.minor.allele for number of samples in dataset.")
+  }
   
   # set up allele depth matrix
   alleleDepth <- matrix(0L, nrow = length(sampleNames), 
@@ -991,6 +1010,8 @@ readStacks <- function(allelesFile, matchesFolder, version = 2,
     alleleDepth[i, theseAlNames] <- theseDepth
     reorder[mf[[msamcol]][1]] <- i
   }
+  # eliminate any  sample numbers that were skipped, and reorder matrix
+  reorder <- reorder[!is.na(reorder) & reorder > 0]
   alleleDepth <- alleleDepth[reorder,]
   
   # filter loci
@@ -1009,7 +1030,7 @@ readStacks <- function(allelesFile, matchesFolder, version = 2,
     }
     
     # determine whether to keep the locus
-    keepLoc <- sum(rowSums(alleleDepth[,thesecol]) > 0) >= min.ind.with.reads
+    keepLoc <- sum(rowSums(alleleDepth[,thesecol, drop = FALSE]) > 0) >= min.ind.with.reads
     if(keepLoc){
       commonAllele <- which.max(indperal[thesecol])
       keepLoc <- sum(indperal[thesecol[-commonAllele]]) >= min.ind.with.minor.allele

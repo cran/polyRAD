@@ -31,7 +31,7 @@ RADdata <- function(alleleDepth, alleles2loc, locTable, possiblePloidies,
     stop("possiblePloidies must be list")
   }
   possiblePloidies <- lapply(possiblePloidies, as.integer)
-  if(!all(sapply(possiblePloidies, function(x) all(!is.na(x) && x > 0)))){
+  if(!all(sapply(possiblePloidies, function(x) all(!is.na(x) & x > 0)))){
     stop("Each element of possiblePloidies should be a vector of integers greater than zero.")
   }
   if(contamRate < 0 || contamRate > 1){
@@ -995,30 +995,7 @@ AddAlleleFreqByTaxa.RADdata <- function(object, minfreq = 0.0001, ...){
            ncol = nAlleles(object))
   
   # adjust allele frequencies to possible values
-  for(loc in sort(unique(object$alleles2loc))){
-    thesecol <- which(object$alleles2loc == loc) # columns for this locus
-    for(taxa in 1:nTaxa(object)){
-      thesefreq <- predAl[taxa,thesecol]
-      thesefreq <- thesefreq/sum(thesefreq) # must sum to 1
-      while(any(thesefreq < minfreq)){
-        oldfreq <- thesefreq
-        toolow <- thesefreq < minfreq
-        thesefreq[toolow] <- minfreq
-        canadjust <- thesefreq > minfreq
-        adjust <- sum(thesefreq - oldfreq)/sum(canadjust)
-        thesefreq[canadjust] <- thesefreq[canadjust] - adjust
-      }
-      while(any(thesefreq > (1 - minfreq))){
-        oldfreq <- thesefreq
-        toohigh <- thesefreq > 1 - minfreq
-        thesefreq[toohigh] <- 1 - minfreq
-        canadjust <- thesefreq < 1 - minfreq
-        adjust <- sum(oldfreq - thesefreq)/sum(canadjust)
-        thesefreq[canadjust] <- thesefreq[canadjust] + adjust
-      }
-      predAl[taxa,thesecol] <- thesefreq
-    }
-  }
+  predAl <- AdjustAlleleFreq(predAl, object$alleles2loc, minfreq)
   
   dimnames(predAl) <- list(GetTaxa(object), GetAlleleNames(object))
   object$alleleFreqByTaxa <- predAl
@@ -1253,25 +1230,6 @@ AddAlleleBias.RADdata <- function(object, maxbias = 4, ...){
   bias <- ((1 - object$normalizedDepthProp)/(1 - object$alleleFreq))/
     (object$normalizedDepthProp / object$alleleFreq)
   
-  # # total depth per locus
-  # locdepth <- colSums(object$alleleDepth + object$antiAlleleDepth)
-  # # normalized total depth per allele
-  # normdepth <- round(object$normalizedDepthProp * locdepth)
-  # # probability of seeing apparent bias that extreme if there is no bias
-  # p_no_bias <- numeric(length(bias))
-  # biaspos <- object$normalizedDepthProp > object$alleleFreq
-  # p_no_bias[biaspos] <- pbinom(normdepth[biaspos], locdepth[biaspos],
-  #                              object$alleleFreq[biaspos], lower.tail = FALSE)
-  # p_no_bias[!biaspos] <- pbinom(normdepth[!biaspos], locdepth[!biaspos],
-  #                              object$alleleFreq[!biaspos], lower.tail = TRUE)
-  # 
-  # # correct bias based on that probability
-  # ## (this might not be the best method; set prior instead?)
-  # corr_log_bias <- log(bias) * (1 - p_no_bias)
-  # object$alleleBias <- exp(corr_log_bias)
-  # object$alleleBias[object$alleleBias > maxbias] <- maxbias
-  # object$alleleBias[object$alleleBias < 1/maxbias] <- 1/maxbias
-  
   object$alleleBias <- bias
   
   return(object)
@@ -1417,6 +1375,27 @@ GetBlankTaxa.RADdata <- function(object, ...){
 
 # some basic utilities ####
 
+# plot method that shows the PCA results
+plot.RADdata <- function(x, ...){
+  if(is.null(x$PCA)){
+    message("Performing principal components analysis...")
+    x <- AddPCA(x)
+  }
+  
+  plot(x$PCA[,1], x$PCA[,2], xlab = "PC1", ylab = "PC2",
+       main = "PCA of RADdata object", ...)
+  if(!is.null(attr(x, "donorParent"))){
+    don <- GetDonorParent(x)
+    points(x$PCA[don, 1], x$PCA[don, 2], col = "darkgreen")
+    text(x$PCA[don, 1], x$PCA[don, 2], "donor", col = "darkgreen", pos = 1)
+  }
+  if(!is.null(attr(x, "recurrentParent"))){
+    rec <- GetRecurrentParent(x)
+    points(x$PCA[rec, 1], x$PCA[rec, 2], col = "blue")
+    text(x$PCA[rec, 1], x$PCA[rec, 2], "recurrent", col = "blue", pos = 1)
+  }
+}
+
 OneAllelePerMarker <- function(object, ...){
   UseMethod("OneAllelePerMarker", object)
 }
@@ -1456,6 +1435,9 @@ SubsetByTaxon <- function(object, ...){
 }
 SubsetByTaxon.RADdata <- function(object, taxa, ...){
   # check and convert taxa
+  if(length(taxa) == 0){
+    stop("At least one taxon must be provided for subsetting.")
+  }
   if(is.character(taxa)){
     taxa <- fastmatch::fmatch(taxa, GetTaxa(object))
     if(any(is.na(taxa))) stop("Some taxa don't match RADdata object.")
@@ -1467,10 +1449,7 @@ SubsetByTaxon.RADdata <- function(object, taxa, ...){
   }
   
   # set up object and transfer attributes (including class)
-  splitRADdata <- list()
-  oldAttributes <- attributes(object)
-  oldAttributes <- oldAttributes[-match("names", names(oldAttributes))]
-  attributes(splitRADdata) <- oldAttributes
+  splitRADdata <- object
   attr(splitRADdata, "nTaxa") <- length(taxa)
   attr(splitRADdata, "taxa") <- GetTaxa(object)[taxa]
   
@@ -1521,6 +1500,10 @@ SubsetByTaxon.RADdata <- function(object, taxa, ...){
   if(!is.null(object$PCA)){
     splitRADdata$PCA <- object$PCA[taxa,, drop = FALSE]
   }
+  if(!is.null(object$priorProbLD)){
+    splitRADdata$priorProbLD <- 
+      lapply(object$priorProbLD, function(x) x[, taxa,, drop = FALSE])
+  }
   
   return(splitRADdata)
 }
@@ -1530,6 +1513,9 @@ SubsetByLocus <- function(object, ...){
 }
 SubsetByLocus.RADdata <- function(object, loci, ...){
   # check and convert loci
+  if(length(loci) == 0){
+    stop("At least one locus must be provided for subsetting.")
+  }
   if(is.character(loci)){
     loci <- fastmatch::fmatch(loci, rownames(object$locTable))
     if(any(is.na(loci))) stop("Some loci don't match RADdata object.")
@@ -1542,10 +1528,7 @@ SubsetByLocus.RADdata <- function(object, loci, ...){
   
   # set up object and transfer attributes (including class)
   thesealleles <- object$alleles2loc %fin% loci
-  splitRADdata <- list()
-  oldAttributes <- attributes(object)
-  oldAttributes <- oldAttributes[-match("names", names(oldAttributes))]
-  attributes(splitRADdata) <- oldAttributes
+  splitRADdata <- object
   attr(splitRADdata, "nLoci") <- length(loci)
   
   # mandatory slots
@@ -1599,8 +1582,104 @@ SubsetByLocus.RADdata <- function(object, loci, ...){
   if(!is.null(object$PCA)){
     splitRADdata$PCA <- object$PCA
   }
+  if(!is.null(object$likelyGeno_donor)){
+    splitRADdata$likelyGeno_donor <- 
+      object$likelyGeno_donor[, thesealleles, drop = FALSE]
+  }
+  if(!is.null(object$likelyGeno_recurrent)){
+    splitRADdata$likelyGeno_recurrent <- 
+      object$likelyGeno_recurrent[, thesealleles, drop = FALSE]
+  }
+  if(!is.null(object$priorProbLD)){
+    splitRADdata$priorProbLD <- 
+      lapply(object$priorProbLD, function(x) x[,, thesealleles, drop = FALSE])
+  }
+  if(!is.null(object$alleleLinkages)){
+    splitRADdata$alleleLinkages <- object$alleleLinkages[thesealleles]
+  }
   
   return(splitRADdata)
+}
+SubsetByPloidy <- function(object, ...){
+  UseMethod("SubsetByPloidy", object)
+}
+SubsetByPloidy.RADdata <- function(object, ploidies, ...){
+  ploidies <- lapply(ploidies, as.integer)
+  object$possiblePloidies <- ploidies
+  # don't need to subset much if genotype calling not done
+  if(is.null(object$priorProbPloidies)){
+    return(object)
+  }
+  
+  npld <- length(ploidies)
+  # get indices of the desired ploidies in the object
+  pldindex <- integer(npld)
+  for(i in 1:npld){
+    for(j in 1:length(object$priorProbPloidies)){
+      if(identical(ploidies[[i]], object$priorProbPloidies[[j]])){
+        pldindex[i] <- j
+        break
+      }
+    }
+    if(pldindex[i] == 0){
+      stop(paste("Ploidy", paste(ploidies[[i]], collapse = " "), 
+                 "not found in dataset."))
+    }
+  }
+  object$priorProbPloidies <- ploidies
+  
+  if(!is.null(object$priorProb)){
+    object$priorProb <- object$priorProb[pldindex]
+  }
+  if(!is.null(object$ploidyChiSq)){
+    object$ploidyChiSq <- object$ploidyChiSq[pldindex,, drop = FALSE]
+  }
+  if(!is.null(object$ploidyChiSqP)){
+    object$ploidyChiSqP <- object$ploidyChiSqP[pldindex,, drop = FALSE]
+  }
+  if(!is.null(object$ploidyLikelihood)){
+    object$ploidyLikelihood <- object$ploidyLikelihood[pldindex,, drop = FALSE]
+  }
+  if(!is.null(object$priorTimesLikelihood)){
+    object$priorTimesLikelihood <- object$priorTimesLikelihood[pldindex]
+  }
+  if(!is.null(object$priorProbLD)){
+    object$priorProbLD <- object$priorProbLD[pldindex]
+  }
+  
+  # subset items relating to likelihood, which ignore auto/allo differences
+  pldsums <- sapply(ploidies, sum)
+  if(!is.null(object$genotypeLikelihood)){
+    likpld <- sapply(object$genotypeLikelihood, function(x) dim(x)[1] - 1L)
+    object$genotypeLikelihood <- object$genotypeLikelihood[likpld %in% pldsums]
+  }
+  if(!is.null(object$likelyGeno_donor)){
+    keeprow <- as.integer(rownames(object$likelyGeno_donor)) %in% pldsums
+    object$likelyGeno_donor <- object$likelyGeno_donor[keeprow,, drop = FALSE]
+  }
+  if(!is.null(object$likelyGeno_recurrent)){
+    keeprow <- as.integer(rownames(object$likelyGeno_recurrent)) %in% pldsums
+    object$likelyGeno_recurrent <- 
+      object$likelyGeno_recurrent[keeprow,, drop = FALSE]
+  }
+  
+  # subset parental ploidies if mapping population
+  ploidyfound <- function(x){
+    for(pld in ploidies){
+      if(identical(pld, x)) return(TRUE)
+    }
+    return(FALSE)
+  }
+  if(!is.null(object$donorPloidies)){
+    keeppld <- sapply(object$donorPloidies, ploidyfound)
+    object$donorPloidies <- object$donorPloidies[keeppld]
+  }
+  if(!is.null(object$recurrentPloidies)){
+    keeppld <- sapply(object$recurrentPloidies, ploidyfound)
+    object$recurrentPloidies <- object$recurrentPloidies[keeppld]
+  }
+  
+  return(object)
 }
 SplitByChromosome <- function(object, ...){
   UseMethod("SplitByChromosome", object)
@@ -2015,4 +2094,101 @@ LocusInfo.RADdata <- function(object, locus, genome = NULL, annotation = NULL, v
   }
   
   return(out)
+}
+
+# function to merge multiple taxa into one before doing genotyping
+MergeTaxaDepth <- function(object, ...){
+  UseMethod("MergeTaxaDepth", object)
+}
+MergeTaxaDepth.RADdata <- function(object, taxa, ...){
+  if(!is.null(object$alleleFreq)){
+    stop("Run MergeTaxaCounts before running any pipeline functions.")
+  }
+  if(length(taxa) < 2){
+    stop("At least two taxa must be merged.")
+  }
+  message(paste(length(taxa), " taxa will be merged into the taxon ", taxa[1],
+                ".", sep = ""))
+  
+  taxanum <- match(taxa, GetTaxa(object))
+  
+  # sum read depths and remove taxa from matrices
+  object$alleleDepth[taxanum[1],] <- 
+    as.integer(colSums(object$alleleDepth[taxanum,]))
+  object$alleleDepth <- object$alleleDepth[-taxanum[-1],]
+  
+  object$locDepth[taxanum[1],] <- 
+    as.integer(colSums(object$locDepth[taxanum,]))
+  object$locDepth <- object$locDepth[-taxanum[-1],]
+  
+  object$antiAlleleDepth[taxanum[1],] <- 
+    as.integer(colSums(object$antiAlleleDepth[taxanum,]))
+  object$antiAlleleDepth <- object$antiAlleleDepth[-taxanum[-1],]
+  
+  # remove taxa from attributes
+  attr(object, "taxa") <- attr(object, "taxa")[-taxanum[-1]]
+  attr(object, "nTaxa") <- length(attr(object, "taxa"))
+  
+  # recalculated depth ratio and sampling permutations
+  object$depthRatio <- object$depthRatio[-taxanum[-1],]
+  object$depthRatio[taxa[1],] <- object$alleleDepth[taxa[1],]/
+    (object$alleleDepth[taxa[1],] + object$antiAlleleDepth[taxa[1],])
+  
+  object$depthSamplingPermutations <- object$depthSamplingPermutations[-taxanum[-1],]
+  object$depthSamplingPermutations[taxa[1],] <- 
+    lchoose(object$alleleDepth[taxa[1],] + object$antiAlleleDepth[taxa[1],],
+            object$alleleDepth[taxa[1],])
+  
+  return(object)
+}
+# function to filter out loci that couldn't be genotyped, generally because
+# parent genotypes did not match allele frequency.
+RemoveUngenotypedLoci <- function(object, ...){
+  UseMethod("RemoveUngenotypedLoci", object)
+}
+RemoveUngenotypedLoci.RADdata <- function(object, removeNonvariant = TRUE,
+                                          ...){
+  if(is.null(object$posteriorProb)){
+    stop("Perform genotype calling before running RemoveUngenotypedLoci.")
+  }
+  
+  # if this is a mapping population, we will exclude the parents when
+  # looking for missing or non-variable genotypes
+  have_parents <- !is.null(attr(object, "donorParent")) && 
+    !is.null(attr(object, "recurrentParent"))
+  if(have_parents){
+    parents <- c(match(GetDonorParent(object), GetTaxa(object)),
+                 match(GetRecurrentParent(object), GetTaxa(object)))
+  }
+  
+  # vector of alleles to discard; becomes FALSE if non-missing for any ploidy
+  alleles_discard <- rep(TRUE, nAlleles(object))
+  
+  # loop through ploidies
+  for(prob in object$posteriorProb){
+    if(have_parents){
+      prob <- prob[, -parents, , drop = FALSE]
+    }
+    all_missing <- apply(prob, 3, function(x) all(is.na(x)))
+    
+    if(removeNonvariant){
+      nmprob <- prob[,, !all_missing, drop = FALSE]
+      nonvar <- apply(nmprob, 3, 
+            function(x) all(apply(x, 1, 
+                                  function(y) sd(y, na.rm = TRUE) == 0),
+                            na.rm = TRUE))
+      all_missing[!all_missing] <- nonvar
+    }
+    
+    alleles_discard <- alleles_discard & all_missing
+  }
+  
+  # discard loci that have any alleles to discard
+  loci_discard <- unique(object$alleles2loc[alleles_discard])
+  if(length(loci_discard) > 0){
+    loci_keep <- (1:nLoci(object))[-loci_discard]
+    object <- SubsetByLocus(object, loci_keep)
+  }
+  
+  return(object)
 }
