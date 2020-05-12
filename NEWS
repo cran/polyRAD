@@ -1,3 +1,54 @@
+## Changes in v1.2 ##
+
+The functions HindHe and HindHeMapping have been added, to assist with filtering
+loci that are behaving in a non-Mendelian fashion, as well as individuals that
+do not behave like the expected ploidy.  The function InbreedingFromHIndHe has
+been added to facilitate estimating the inbreeding statistic F from the results
+of HindHe.
+
+The Python scripts process_sam_multi.py and process_isoloci.py have been added,
+to serve as a pipeline for variant calling in highly duplicated genomes.  These
+are described in a new vignette, "Variant and Genotype Calling in Highly
+Duplicated Genomes" (isolocus_sorting.Rmd).  The functions readProcessSamMulti
+and readProcessIsoloci have been added for import of data from the Python
+scripts into polyRAD.
+
+The function RADdata2VCF has been added for export to VCF.
+
+A Python script has been added to help identify full tag sequences for alleles
+imported from TASSEL-GBSv2 using VCF2RADdata.
+
+The GetProbableGenotypes function has been updated to optionally recognize
+genotypes where copy number does not sum to the ploidy across all alleles for a
+locus.  It can now either set these genotypes to NA or correct them to sum to
+the ploidy.  Some internal Rcpp functions were added for this purpose.
+
+A bug has been fixed in SubsetByPloidy.
+
+MergeTaxaDepth now generates a more useful error if taxa are specified that
+do not exist in the object.
+
+If duplicate locus names are passed to SubsetByLocus, it now generates a
+warning and deals with the duplicated loci more appropriately.
+
+The AddDepthSamplingPermutations function has been added.  Permutations for
+estimating genotype likelihoods are no longer calculated at the time of data
+import, but instead are calculated the first time that genotype likelihoods
+are calculated.  This is to avoid unnessasary calculation and recalculation
+when alleles and taxa are filtered or merged before running genotype calling.
+From the user perspective, there isn't any change except faster import.
+
+The EstimateParentalGenotypes function has been added, using code that was
+previously in the AddGenotypePriorProb_Mapping2Parents.  This does not
+impact anything frin the user's perspective, but makes the code slightly
+less unweildy and allows parental genotype estimations to be used for other
+purposes.
+
+The MergeIdenticalHaplotypes function has been added.
+
+Internal functions for simulating gametes and calculating their frequencies have
+been corrected so that they still work when only one allele is being simulated.
+
 ## Changes in v1.1 ##
 
 A plot method has been added for RADdata objects.

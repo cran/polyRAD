@@ -25,7 +25,10 @@ RADdata <- function(alleleDepth, alleles2loc, locTable, possiblePloidies,
     stop("Each locus number in alleles2loc must correspond to a row in loctable.")
   }
   if(!is.data.frame(locTable)){
-    stop("loctable must be a data frame.")
+    stop("locTable must be a data frame.")
+  }
+  if(!is.null(locTable$Chr) && is.factor(locTable$Chr)){
+    warning("Chromosomes should be coded as character or integer rather than factor in locTable.")
   }
   if(!is.list(possiblePloidies)){
     stop("possiblePloidies must be list")
@@ -59,10 +62,6 @@ RADdata <- function(alleleDepth, alleles2loc, locTable, possiblePloidies,
   
   expandedLocDepth <- locDepth[,as.character(alleles2loc), drop = FALSE]
   
-  # get log of number of permutations of order in which each allele could have
-  # been sampled from total depth from that locus.
-  depthSamplingPermutations <- lchoose(expandedLocDepth, alleleDepth)
-  dimnames(depthSamplingPermutations)[[2]] <- dimnames(alleleDepth)[[2]]
   # for each allele and taxon, get proportion of reads for that locus
   depthRatio <- alleleDepth/expandedLocDepth
   # depth of reads for each locus that do NOT belong to a given allele
@@ -71,8 +70,7 @@ RADdata <- function(alleleDepth, alleles2loc, locTable, possiblePloidies,
   
   return(structure(list(alleleDepth = alleleDepth, alleles2loc = alleles2loc,
                         locTable = locTable, possiblePloidies = possiblePloidies,
-                        locDepth = locDepth, 
-                        depthSamplingPermutations = depthSamplingPermutations,
+                        locDepth = locDepth,
                         depthRatio = depthRatio, antiAlleleDepth = antiAlleleDepth,
                         alleleNucleotides = alleleNucleotides), 
                    class = "RADdata", taxa = taxa, nTaxa = nTaxa, nLoci = nLoci,
@@ -133,6 +131,18 @@ print.RADdata <- function(x, ...){
 }
 
 #### parameter estimation generic functions and methods ####
+AddDepthSamplingPermutations <- function(object, ...){
+  UseMethod("AddDepthSamplingPermutations", object)
+}
+AddDepthSamplingPermutations.RADdata <- function(object, ...){
+  # get log of number of permutations of order in which each allele could have
+  # been sampled from total depth from that locus.
+  expandedLocDepth <- object$alleleDepth + object$antiAlleleDepth
+  depthSamplingPermutations <- lchoose(expandedLocDepth, object$alleleDepth)
+  dimnames(depthSamplingPermutations)[[2]] <- dimnames(object$alleleDepth)[[2]]
+  object$depthSamplingPermutations <- depthSamplingPermutations
+  return(object)
+}
 # estimate allele frequencies assuming mapping population.
 # Simple version using depth ratios.
 AddAlleleFreqMapping <- function(object, ...){
@@ -145,7 +155,8 @@ AddAlleleFreqMapping.RADdata <- function(object,
                                                          GetRecurrentParent(object),
                                                          GetBlankTaxa(object)), ...){#,
 #                                         deleteLociOutsideFreqRange = FALSE){
-  if(min(dist(expectedFreqs, method = "manhattan"))/2 < allowedDeviation){
+  maxdev <- min(dist(expectedFreqs, method = "manhattan"))/2
+  if(maxdev < allowedDeviation && !isTRUE(all.equal(maxdev, allowedDeviation))){
     stop("allowedDeviation is too large given intervals within expectedFreqs")
   }
   if(!is.character(excludeTaxa)){
@@ -215,6 +226,10 @@ AddGenotypeLikelihood.RADdata <- function(object, overdispersion = 9, ...){
     object <- AddAlleleFreqHWE(object)
   }
   alFreq <- object$alleleFreq
+  if(is.null(object$depthSamplingPermutations)){
+    message("Generating sampling permutations for allele depth.")
+    object <- AddDepthSamplingPermutations(object)
+  }
   
   # get ploidies, ignoring inheritance pattern
   ploidies <- sort(unique(sapply(object$possiblePloidies, sum)))
@@ -324,6 +339,124 @@ GetLikelyGen.RADdata <- function(object, taxon, minLikelihoodRatio = 10){
   return(outmat)
 }
 
+# Estimate parental genotypes.  Used for getting genotype priors in mapping
+# population, and for Hind/He statistic.
+EstimateParentalGenotypes <- function(object, ...){
+  UseMethod("EstimateParentalGenotypes", object)
+}
+EstimateParentalGenotypes.RADdata <- 
+  function(object,
+           donorParent = GetDonorParent(object), 
+           recurrentParent = GetRecurrentParent(object), n.gen.backcrossing = 0,
+           n.gen.intermating = 0,
+           n.gen.selfing = 0, donorParentPloidies = object$possiblePloidies,
+           recurrentParentPloidies = object$possiblePloidies,
+           minLikelihoodRatio = 10, ...){
+    if(any(!donorParentPloidies %in% object$possiblePloidies) ||
+       any(!recurrentParentPloidies %in% object$possiblePloidies)){
+      # make sure we have all parental ploidies so we can get likelihoods 
+      ### change this? ploidy by individual in future?
+      stop("All parent ploidies must be in the possible ploidies for the object")
+    }
+    if(is.null(object$alleleFreq) || attr(object,"alleleFreqType") != "mapping"){
+      message("Allele frequencies for mapping population not found.  Estimating.")
+      allelesin <- max(sapply(donorParentPloidies, sum)) + 
+        max(sapply(recurrentParentPloidies, sum))
+      possfreq <- seq(0, 1, length.out = (n.gen.backcrossing + 1) * allelesin + 1)
+      alldev <- (possfreq[2] - possfreq[1])/2
+      object <- AddAlleleFreqMapping(object, allowedDeviation = alldev, 
+                                     expectedFreqs = possfreq)
+    }
+    if(is.null(object$genotypeLikelihood)){
+      message("Genotype likelihoods not found.  Estimating.")
+      object <- AddGenotypeLikelihood(object)
+    }
+    
+    pldtot <- sapply(object$genotypeLikelihood, function(x) dim(x)[1] - 1)
+    pldtot.don <- pldtot[pldtot %in% sapply(donorParentPloidies, sum)]
+    pldtot.rec <- pldtot[pldtot %in% sapply(recurrentParentPloidies, sum)]
+    likelyGen.don <- GetLikelyGen(object, donorParent, 
+                                  minLikelihoodRatio = minLikelihoodRatio)[as.character(pldtot.don),,drop = FALSE]
+    likelyGen.rec <- GetLikelyGen(object, recurrentParent,
+                                  minLikelihoodRatio = minLikelihoodRatio)[as.character(pldtot.rec),,drop = FALSE]
+    # combinations of parent ploidies that match list of progeny ploidies
+    pldcombos <- matrix(NA, nrow = 0, ncol = 2, 
+                        dimnames = list(NULL,c("donor","recurrent")))
+    # matrix of expected allele frequencies for all possible genotypes and ploidies
+    expfreq_byPloidy <- list()
+    # find possible combinations of parent ploidies, and possible expected allele frequencies
+    for(pl.d in pldtot.don){
+      for(pl.r in pldtot.rec){
+        if((pl.d/2 + pl.r/2) %in% pldtot && (n.gen.backcrossing == 0 || pl.d == pl.r)){
+          pldcombos <- rbind(pldcombos, matrix(c(pl.d, pl.r), nrow = 1, ncol = 2))
+          
+          expfreq_byPloidy[[length(expfreq_byPloidy) + 1]] <- matrix(nrow = pl.d+1, ncol = pl.r+1)
+          for(gen.d in 0:pl.d){
+            for(gen.r in 0:pl.r){
+              expfreq_byPloidy[[length(expfreq_byPloidy)]][gen.d + 1, gen.r + 1] <- 
+                (gen.d * 0.5^n.gen.backcrossing + gen.r * (2 - 0.5^n.gen.backcrossing))/
+                (pl.d + pl.r)
+            }
+          }
+        }
+      }
+    }
+    
+    # do allele frequencies match parent genotypes?
+    freqMatchGen <- matrix(FALSE, nrow = dim(pldcombos)[1], ncol = nAlleles(object))
+    for(i in 1:dim(pldcombos)[1]){
+      thisgen.don <- likelyGen.don[as.character(pldcombos[i,"donor"]),]
+      thisgen.rec <- likelyGen.rec[as.character(pldcombos[i,"recurrent"]),]
+      expfreq <- (thisgen.don * 0.5^n.gen.backcrossing + 
+                    thisgen.rec * (2 - 0.5^n.gen.backcrossing))/(pldcombos[i,"donor"] + 
+                                                                   pldcombos[i,"recurrent"])
+      freqMatchGen[i,] <- expfreq == object$alleleFreq
+    }
+    freqMatchGen[is.na(freqMatchGen)] <- FALSE
+    allelesToFix <- which(colSums(freqMatchGen) == 0)
+    # correct parental genotypes where appropriate, using rounded allele frequencies
+    for(a in allelesToFix){
+      thisfreq <- object$alleleFreq[a]
+      for(i in 1:dim(pldcombos)[1]){
+        poss_matches <- which(expfreq_byPloidy[[i]] == thisfreq, arr.ind = TRUE) - 1
+        if(nrow(poss_matches) == 0) next
+        if(nrow(poss_matches) == 1){
+          # only one possible match (i.e. when there is backcrossing)
+          likelyGen.don[as.character(pldcombos[i,"donor"]),a] <- 
+            unname(poss_matches[,1])
+          likelyGen.rec[as.character(pldcombos[i,"recurrent"]),a] <- 
+            unname(poss_matches[,2])
+        } else { # multiple possible matches
+          # vector to contain genotype combo likelihoods
+          thislikeli <- numeric(nrow(poss_matches)) 
+          # indices for current ploidies
+          plind.d <- which(pldtot == pldcombos[i,"donor"])
+          plind.r <- which(pldtot == pldcombos[i,"recurrent"])
+          for(m in 1:nrow(poss_matches)){
+            gen.d <- poss_matches[m,1]
+            gen.r <- poss_matches[m,2]
+            
+            thislikeli[m] <- 
+              object$genotypeLikelihood[[plind.d]][gen.d + 1, donorParent, a] *
+              object$genotypeLikelihood[[plind.r]][gen.r + 1, recurrentParent, a]
+          }
+          bestcombo <- which(thislikeli == max(thislikeli))
+          if(length(bestcombo) == 1){
+            likelyGen.don[as.character(pldcombos[i,"donor"]),a] <- 
+              unname(poss_matches[bestcombo, 1])
+            likelyGen.rec[as.character(pldcombos[i,"recurrent"]),a] <- 
+              unname(poss_matches[bestcombo, 2])
+          }
+        }
+      }
+    }
+    
+    # save corrected parental genotypes to object
+    object$likelyGeno_donor <- likelyGen.don
+    object$likelyGeno_recurrent <- likelyGen.rec
+    object$pldcombos <- pldcombos # this is needed to add genotype prior prob
+    return(object)
+}
 # for a mapping population with two parents, get prior genotype probabilities
 # based on parent genotypes and progeny allele frequencies
 AddGenotypePriorProb_Mapping2Parents <- function(object, ...){
@@ -336,109 +469,16 @@ AddGenotypePriorProb_Mapping2Parents.RADdata <- function(object,
     n.gen.selfing = 0, donorParentPloidies = object$possiblePloidies,
     recurrentParentPloidies = object$possiblePloidies,
     minLikelihoodRatio = 10, ...){
-  if(any(!donorParentPloidies %in% object$possiblePloidies) ||
-     any(!recurrentParentPloidies %in% object$possiblePloidies)){
-    # make sure we have all parental ploidies so we can get likelihoods 
-    ### change this? ploidy by individual in future?
-    stop("All parent ploidies must be in the possible ploidies for the object")
-  }
-  if(is.null(object$alleleFreq) || attr(object,"alleleFreqType") != "mapping"){
-    message("Allele frequencies for mapping population not found.  Estimating.")
-    allelesin <- max(sapply(donorParentPloidies, sum)) + 
-      max(sapply(recurrentParentPloidies, sum))
-    possfreq <- seq(0, 1, length.out = (n.gen.backcrossing + 1) * allelesin + 1)
-    alldev <- (possfreq[2] - possfreq[1])/2
-    object <- AddAlleleFreqMapping(object, allowedDeviation = alldev, 
-                                   expectedFreq = possfreq)
-  }
-  if(is.null(object$genotypeLikelihood)){
-    message("Genotype likelihoods not found.  Estimating.")
-    object <- AddGenotypeLikelihood(object)
-  }
   # get most likely genotype for the parents
-  pldtot <- sapply(object$genotypeLikelihood, function(x) dim(x)[1] - 1)
-  pldtot.don <- pldtot[pldtot %in% sapply(donorParentPloidies, sum)]
-  pldtot.rec <- pldtot[pldtot %in% sapply(recurrentParentPloidies, sum)]
-  nAlleles <- nAlleles(object)
-  likelyGen.don <- GetLikelyGen(object, donorParent, 
-                                minLikelihoodRatio = minLikelihoodRatio)[as.character(pldtot.don),,drop = FALSE]
-  likelyGen.rec <- GetLikelyGen(object, recurrentParent,
-                                minLikelihoodRatio = minLikelihoodRatio)[as.character(pldtot.rec),,drop = FALSE]
-  # combinations of parent ploidies that match list of progeny ploidies
-  pldcombos <- matrix(NA, nrow = 0, ncol = 2, 
-                      dimnames = list(NULL,c("donor","recurrent")))
-  # matrix of expected allele frequencies for all possible genotypes and ploidies
-  expfreq_byPloidy <- list()
-  # find possible combinations of parent ploidies, and possible expected allele frequencies
-  for(pl.d in pldtot.don){
-    for(pl.r in pldtot.rec){
-      if((pl.d/2 + pl.r/2) %in% pldtot && (n.gen.backcrossing == 0 || pl.d == pl.r)){
-        pldcombos <- rbind(pldcombos, matrix(c(pl.d, pl.r), nrow = 1, ncol = 2))
-        
-        expfreq_byPloidy[[length(expfreq_byPloidy) + 1]] <- matrix(nrow = pl.d+1, ncol = pl.r+1)
-        for(gen.d in 0:pl.d){
-          for(gen.r in 0:pl.r){
-            expfreq_byPloidy[[length(expfreq_byPloidy)]][gen.d + 1, gen.r + 1] <- 
-              (gen.d * 0.5^n.gen.backcrossing + gen.r * (2 - 0.5^n.gen.backcrossing))/
-              (pl.d + pl.r)
-          }
-        }
-      }
-    }
-  }
-  
-  # do allele frequencies match parent genotypes?
-  freqMatchGen <- matrix(FALSE, nrow = dim(pldcombos)[1], ncol = nAlleles)
-  for(i in 1:dim(pldcombos)[1]){
-    thisgen.don <- likelyGen.don[as.character(pldcombos[i,"donor"]),]
-    thisgen.rec <- likelyGen.rec[as.character(pldcombos[i,"recurrent"]),]
-    expfreq <- (thisgen.don * 0.5^n.gen.backcrossing + 
-      thisgen.rec * (2 - 0.5^n.gen.backcrossing))/(pldcombos[i,"donor"] + 
-                                                     pldcombos[i,"recurrent"])
-    freqMatchGen[i,] <- expfreq == object$alleleFreq
-  }
-  freqMatchGen[is.na(freqMatchGen)] <- FALSE
-  allelesToFix <- which(colSums(freqMatchGen) == 0)
-  # correct parental genotypes where appropriate, using rounded allele frequencies
-  for(a in allelesToFix){
-    thisfreq <- object$alleleFreq[a]
-    for(i in 1:dim(pldcombos)[1]){
-      poss_matches <- which(expfreq_byPloidy[[i]] == thisfreq, arr.ind = TRUE) - 1
-      if(nrow(poss_matches) == 0) next
-      if(nrow(poss_matches) == 1){
-        # only one possible match (i.e. when there is backcrossing)
-        likelyGen.don[as.character(pldcombos[i,"donor"]),a] <- 
-          unname(poss_matches[,1])
-        likelyGen.rec[as.character(pldcombos[i,"recurrent"]),a] <- 
-          unname(poss_matches[,2])
-      } else { # multiple possible matches
-        # vector to contain genotype combo likelihoods
-        thislikeli <- numeric(nrow(poss_matches)) 
-        # indices for current ploidies
-        plind.d <- which(pldtot == pldcombos[i,"donor"])
-        plind.r <- which(pldtot == pldcombos[i,"recurrent"])
-        for(m in 1:nrow(poss_matches)){
-          gen.d <- poss_matches[m,1]
-          gen.r <- poss_matches[m,2]
-          
-          thislikeli[m] <- 
-            object$genotypeLikelihood[[plind.d]][gen.d + 1, donorParent, a] *
-            object$genotypeLikelihood[[plind.r]][gen.r + 1, recurrentParent, a]
-        }
-        bestcombo <- which(thislikeli == max(thislikeli))
-        if(length(bestcombo) == 1){
-          likelyGen.don[as.character(pldcombos[i,"donor"]),a] <- 
-            unname(poss_matches[bestcombo, 1])
-          likelyGen.rec[as.character(pldcombos[i,"recurrent"]),a] <- 
-            unname(poss_matches[bestcombo, 2])
-        }
-      }
-    }
-  }
-  
-  # save corrected parental genotypes to object
-  object$likelyGeno_donor <- likelyGen.don
-  object$likelyGeno_recurrent <- likelyGen.rec
+  object <- EstimateParentalGenotypes(object, donorParent = donorParent, 
+                                      recurrentParent = recurrentParent, n.gen.backcrossing = n.gen.backcrossing,
+                                      n.gen.intermating = n.gen.intermating,
+                                      n.gen.selfing = n.gen.selfing, donorParentPloidies = donorParentPloidies,
+                                      recurrentParentPloidies = recurrentParentPloidies,
+                                      minLikelihoodRatio = minLikelihoodRatio)
+  likelyGen.don <- object$likelyGeno_donor
+  likelyGen.rec <- object$likelyGeno_recurrent
+  pldcombos <- object$pldcombos
   
   # function for deteriming ploidy of offspring (by index in possiblePloidies)
   offspringPloidy <- function(pld1, pld2){ 
@@ -842,13 +882,17 @@ GetProbableGenotypes <- function(object, ...){
 GetProbableGenotypes.RADdata <- function(object, omit1allelePerLocus = TRUE,
                                          omitCommonAllele = TRUE,
                                          naIfZeroReads = FALSE, 
-                                         correctParentalGenos = TRUE, ...){
+                                         correctParentalGenos = TRUE, 
+                                         multiallelic = "correct", ...){
   if(!CanDoGetWeightedMeanGeno(object)){
     stop("Need posteriorProb and ploidyChiSq.")
   }
+  if(!multiallelic %in% c("ignore", "na", "correct")){
+    stop("multiallelic should equal 'ignore', 'na', or 'correct'.")
+  }
   # determine which alleles should be processed
   allelesToExport <- 1:nAlleles(object)
-  if(omit1allelePerLocus){
+  if(omit1allelePerLocus && multiallelic == "ignore"){
     allelesToExport <- allelesToExport[-OneAllelePerMarker(object,
                                                            commonAllele = omitCommonAllele)]
   }
@@ -874,6 +918,19 @@ GetProbableGenotypes.RADdata <- function(object, omit1allelePerLocus = TRUE,
     thispld = dim(object$posteriorProb[[p]])[1] - 1L
     outmat[,thesealleles] <- BestGenos(object$posteriorProb[[p]][,,allelesToExport[thesealleles]],
                                        thispld, nTaxa(object), length(thesealleles)) # Rcpp function
+    # correct or delete genotypes that don't sum to ploidy
+    if(multiallelic %in% c("na", "correct")){
+      # fix up alleles2loc and determine number of loci
+      thisA2L <- object$alleles2loc[thesealleles]
+      theseLoci <- unique(thisA2L)
+      thisA2L <- match(thisA2L, theseLoci)
+      # run the Rcpp function do to the correction
+      outmat[,thesealleles] <- 
+        CorrectGenos(outmat[,thesealleles], 
+                     object$posteriorProb[[p]][,,allelesToExport[thesealleles]],
+                     thisA2L, nTaxa(object), thispld, length(thesealleles),
+                     length(theseLoci), multiallelic == "correct")
+    }
     # correct parent genotypes if this is a mapping population
     if(correctParentalGenos && !is.null(object$likelyGeno_donor) &&
        !is.null(object$likelyGeno_recurrent)){
@@ -890,6 +947,14 @@ GetProbableGenotypes.RADdata <- function(object, omit1allelePerLocus = TRUE,
   if(naIfZeroReads){
     isZero <- (object$locDepth == 0)[,as.character(object$alleles2loc[allelesToExport])]
     outmat[isZero] <- NA_integer_
+  }
+  
+  # subset if desired and if correction was done
+  if(omit1allelePerLocus && multiallelic != "ignore"){
+    allelesToExport <- allelesToExport[-OneAllelePerMarker(object,
+                                                           commonAllele = omitCommonAllele)]
+    outmat <- outmat[,allelesToExport]
+    pldindex <- pldindex[allelesToExport]
   }
   
   return(list(genotypes = outmat, ploidy_index = pldindex))
@@ -1459,13 +1524,15 @@ SubsetByTaxon.RADdata <- function(object, taxa, ...){
   splitRADdata$locTable <- object$locTable
   splitRADdata$possiblePloidies <- object$possiblePloidies
   splitRADdata$locDepth <- object$locDepth[taxa, , drop = FALSE]
-  splitRADdata$depthSamplingPermutations <- 
-    object$depthSamplingPermutations[taxa, , drop = FALSE]
   splitRADdata$depthRatio <- object$depthRatio[taxa, , drop = FALSE]
   splitRADdata$antiAlleleDepth <- object$antiAlleleDepth[taxa, , drop = FALSE]
   splitRADdata$alleleNucleotides <- object$alleleNucleotides
   
   # slots that may have been added by other functions
+  if(!is.null(object$depthSamplingPermutations)){
+    splitRADdata$depthSamplingPermutations <- 
+      object$depthSamplingPermutations[taxa, , drop = FALSE]
+  }
   if(!is.null(object$alleleFreq)){
     splitRADdata$alleleFreq <- object$alleleFreq
   }
@@ -1525,6 +1592,10 @@ SubsetByLocus.RADdata <- function(object, loci, ...){
   if(!is.numeric(loci)){
     stop("loci must be a numeric or character vector")
   }
+  if(anyDuplicated(loci)){
+    loci <- unique(loci)
+    warning("Duplicate loci ignored.")
+  }
   
   # set up object and transfer attributes (including class)
   thesealleles <- object$alleles2loc %fin% loci
@@ -1539,13 +1610,15 @@ SubsetByLocus.RADdata <- function(object, loci, ...){
   splitRADdata$possiblePloidies <- object$possiblePloidies
   splitRADdata$locDepth <- object$locDepth[, as.character(loci), drop = FALSE]
   dimnames(splitRADdata$locDepth)[[2]] <- as.character(1:length(loci))
-  splitRADdata$depthSamplingPermutations <- 
-    object$depthSamplingPermutations[, thesealleles, drop = FALSE]
   splitRADdata$depthRatio <- object$depthRatio[, thesealleles, drop = FALSE]
   splitRADdata$antiAlleleDepth <- object$antiAlleleDepth[, thesealleles, drop = FALSE]
   splitRADdata$alleleNucleotides <- object$alleleNucleotides[thesealleles]
   
   # additional components that may exist if some processing has already been done
+  if(!is.null(object$depthSamplingPermutations)){
+    splitRADdata$depthSamplingPermutations <- 
+      object$depthSamplingPermutations[, thesealleles, drop = FALSE]
+  }
   if(!is.null(object$alleleFreq)){
     splitRADdata$alleleFreq <- object$alleleFreq[thesealleles]
   }
@@ -1630,6 +1703,9 @@ SubsetByPloidy.RADdata <- function(object, ploidies, ...){
   
   if(!is.null(object$priorProb)){
     object$priorProb <- object$priorProb[pldindex]
+  }
+  if(!is.null(object$posteriorProb)){
+    object$posteriorProb <- object$posteriorProb[pldindex]
   }
   if(!is.null(object$ploidyChiSq)){
     object$ploidyChiSq <- object$ploidyChiSq[pldindex,, drop = FALSE]
@@ -1808,7 +1884,7 @@ MergeRareHaplotypes <- function(object, ...){
 }
 MergeRareHaplotypes.RADdata <- function(object, min.ind.with.haplotype = 10,
                                         ...){
-  if(!is.null(object$alleleFreq)){
+  if(!is.null(object$alleleFreq) || !is.null(object$depthSamplingPermutations)){
     stop("Run MergeRareHaplotypes before running any pipeline functions.")
   }
 
@@ -1858,8 +1934,6 @@ MergeRareHaplotypes.RADdata <- function(object, min.ind.with.haplotype = 10,
         object$antiAlleleDepth[,alToMerge] - object$alleleDepth[,thisAl]
       object$depthRatio[,alToMerge] <- 
         object$depthRatio[,alToMerge] + object$depthRatio[,thisAl]
-      object$depthSamplingPermutations[,alToMerge] <-
-        lchoose(object$locDepth[,as.character(L)], object$alleleDepth[,alToMerge])
       Nindwithal[alToMerge] <- Nindwithal[alToMerge] + Nindwithal[thisAl]
       # merge nucleotides
       newNt <- .mergeNucleotides(object$alleleNucleotides[[alToMerge]],
@@ -1873,6 +1947,17 @@ MergeRareHaplotypes.RADdata <- function(object, min.ind.with.haplotype = 10,
       allelesToRemove[remIndex] <- thisAl
       remIndex <- remIndex + 1L
     } # end of while loop for merging rare alleles
+    # if an insertion was discarded, get rid of the placeholder
+    thesenuc <- object$alleleNucleotides[thesealleles]
+    splitnuc <- strsplit(thesenuc, split = "")
+    notplaceholder <- sapply(1:nchar(thesenuc[1]), 
+                             function(i) any(sapply(splitnuc,
+                                                    function(x) x[i] != '.')))
+    if(any(!notplaceholder)){
+      splitnuc <- lapply(splitnuc, function(x) x[notplaceholder])
+      thesenuc <- sapply(splitnuc, function(x) paste(x, collapse = ""))
+      object$alleleNucleotides[thesealleles] <- thesenuc
+    }
   } # end of loop through loci
   
   # quit if there is nothing to remove
@@ -1886,8 +1971,6 @@ MergeRareHaplotypes.RADdata <- function(object, min.ind.with.haplotype = 10,
   object$alleleDepth <- object$alleleDepth[,-allelesToRemove]
   object$antiAlleleDepth <- object$antiAlleleDepth[,-allelesToRemove]
   object$depthRatio <- object$depthRatio[,-allelesToRemove]
-  object$depthSamplingPermutations <- 
-    object$depthSamplingPermutations[,-allelesToRemove]
   object$alleleNucleotides <- object$alleleNucleotides[-allelesToRemove]
   object$alleles2loc <- object$alleles2loc[-allelesToRemove]
   return(object)
@@ -2101,7 +2184,7 @@ MergeTaxaDepth <- function(object, ...){
   UseMethod("MergeTaxaDepth", object)
 }
 MergeTaxaDepth.RADdata <- function(object, taxa, ...){
-  if(!is.null(object$alleleFreq)){
+  if(!is.null(object$alleleFreq) || !is.null(object$depthSamplingPermutations)){
     stop("Run MergeTaxaCounts before running any pipeline functions.")
   }
   if(length(taxa) < 2){
@@ -2111,6 +2194,10 @@ MergeTaxaDepth.RADdata <- function(object, taxa, ...){
                 ".", sep = ""))
   
   taxanum <- match(taxa, GetTaxa(object))
+  if(any(is.na(taxanum))){
+    stop(paste("Taxa not found in object:",
+               paste(taxa[is.na(taxanum)], collapse = " ")))
+  }
   
   # sum read depths and remove taxa from matrices
   object$alleleDepth[taxanum[1],] <- 
@@ -2133,11 +2220,6 @@ MergeTaxaDepth.RADdata <- function(object, taxa, ...){
   object$depthRatio <- object$depthRatio[-taxanum[-1],]
   object$depthRatio[taxa[1],] <- object$alleleDepth[taxa[1],]/
     (object$alleleDepth[taxa[1],] + object$antiAlleleDepth[taxa[1],])
-  
-  object$depthSamplingPermutations <- object$depthSamplingPermutations[-taxanum[-1],]
-  object$depthSamplingPermutations[taxa[1],] <- 
-    lchoose(object$alleleDepth[taxa[1],] + object$antiAlleleDepth[taxa[1],],
-            object$alleleDepth[taxa[1],])
   
   return(object)
 }
@@ -2189,6 +2271,44 @@ RemoveUngenotypedLoci.RADdata <- function(object, removeNonvariant = TRUE,
     loci_keep <- (1:nLoci(object))[-loci_discard]
     object <- SubsetByLocus(object, loci_keep)
   }
+  
+  return(object)
+}
+
+# Function to merge alleles with identical nucleotides, generally because
+# one tag was truncated with respect to the variable region.
+MergeIdenticalHaplotypes <- function(object, ...){
+  UseMethod("MergeIdenticalHaplotypes", object)
+}
+MergeIdenticalHaplotypes.RADdata <- function(object, ...){
+  if(!is.null(object$alleleFreq) || !is.null(object$depthSamplingPermutations)){
+    stop("Run MergeIdenticalHaplotypes before running any pipeline functions.")
+  }
+  
+  remal <- integer(0) # indices of alleles to remove
+  for(L in 1:nLoci(object)){
+    thesecol <- which(object$alleles2loc == L)
+    dup <- duplicated(object$alleleNucleotides[thesecol])
+    for(al in thesecol[dup]){
+      # find allele to merge this one into
+      alM <- min(thesecol[object$alleleNucleotides[thesecol] == 
+                            object$alleleNucleotides[al]])
+      stopifnot(al != alM)
+      # consolidate read depth
+      object$alleleDepth[,alM] <- object$alleleDepth[,alM] +
+        object$alleleDepth[,al]
+      object$antiAlleleDepth[,alM] <- object$antiAlleleDepth[,alM] -
+        object$alleleDepth[,al]
+    }
+    remal <- c(remal, thesecol[dup])
+  }
+  
+  # remove duplicated alleles from all slots
+  object$alleleDepth <- object$alleleDepth[,-remal]
+  object$antiAlleleDepth <- object$antiAlleleDepth[,-remal]
+  object$alleles2loc <- object$alleles2loc[-remal]
+  object$alleleNucleotides <- object$alleleNucleotides[-remal]
+  object$depthRatio <- object$depthRatio[,-remal]
   
   return(object)
 }

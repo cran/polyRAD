@@ -1,32 +1,34 @@
 useDynLib(polyRAD)
 
 export(AddAlleleFreqByTaxa, AddAlleleFreqHWE, AddAlleleFreqMapping,
-       AddAlleleLinkages, AddGenotypeLikelihood,  
+       AddAlleleLinkages, AddDepthSamplingPermutations, AddGenotypeLikelihood,  
 AddGenotypePosteriorProb,  AddGenotypePriorProb_ByTaxa,
 AddGenotypePriorProb_Even,
 AddGenotypePriorProb_HWE, AddGenotypePriorProb_LD,
 AddGenotypePriorProb_Mapping2Parents, AddPCA,
 AddPloidyChiSq, AddPloidyLikelihood, AddPriorTimesLikelihood,
-CanDoGetWeightedMeanGeno, EstimateContaminationRate, ExportGAPIT,
-Export_GWASpoly,
+CanDoGetWeightedMeanGeno, EstimateContaminationRate, 
+EstimateParentalGenotypes, ExportGAPIT, Export_GWASpoly,
 Export_MAPpoly, Export_polymapR, Export_rrBLUP_Amat, Export_rrBLUP_GWAS,
 Export_TASSEL_Numeric, GetAlleleNames,
 GetBlankTaxa, GetContamRate, GetDonorParent, GetLikelyGen, 
 GetLocDepth, GetLoci, GetProbableGenotypes, GetRecurrentParent, 
-GetTaxa, GetWeightedMeanGenotypes, IterateHWE, IterateHWE_LD,
+GetTaxa, GetWeightedMeanGenotypes, HindHe, HindHeMapping,
+InbreedingFromHindHe, IterateHWE, IterateHWE_LD,
 IteratePopStruct, IteratePopStructLD, LocusInfo, MakeTasselVcfFilter,
-MergeRareHaplotypes, MergeTaxaDepth, nTaxa, nAlleles, nLoci,
-OneAllelePerMarker, 
-PipelineMapping2Parents, RADdata, readHMC, readStacks, readTagDigger,
-readTASSELGBSv2, RemoveHighDepthLoci, RemoveMonomorphicLoci,
-RemoveUngenotypedLoci,
+MergeIdenticalHaplotypes, MergeRareHaplotypes, MergeTaxaDepth, nTaxa, nAlleles,
+nLoci, OneAllelePerMarker, 
+PipelineMapping2Parents, RADdata, RADdata2VCF, readHMC, readProcessSamMulti,
+readProcessIsoloci,readStacks, readTagDigger, readTASSELGBSv2,
+RemoveHighDepthLoci, RemoveMonomorphicLoci, RemoveUngenotypedLoci,
 SetBlankTaxa, SetContamRate, SetDonorParent, SetRecurrentParent,
 SplitByChromosome, StripDown, SubsetByLocus, SubsetByPloidy, SubsetByTaxon,
 TestOverdispersion, VCF2RADdata)
 
 importFrom("stats", "dist", "dmultinom", "pchisq", "lm", "na.omit", "dbinom",
-           "hclust", "cutree", "as.dist", "cor", "residuals", "lm.fit", "sd")
-importFrom("utils", "read.csv", "write.table", "write.csv")
+           "hclust", "cutree", "as.dist", "cor", "residuals", "lm.fit", "sd",
+           "median")
+importFrom("utils", "read.csv", "write.table", "write.csv", "packageVersion")
 importFrom("fastmatch", "%fin%")
 importFrom("methods", "is")
 importFrom("Rcpp", "evalCpp")
@@ -37,6 +39,7 @@ S3method(AddAlleleFreqByTaxa, RADdata)
 S3method(AddAlleleFreqHWE, RADdata)
 S3method(AddAlleleFreqMapping, RADdata)
 S3method(AddAlleleLinkages, RADdata)
+S3method(AddDepthSamplingPermutations, RADdata)
 S3method(AddGenotypeLikelihood, RADdata)
 S3method(AddGenotypePosteriorProb, RADdata)
 S3method(AddGenotypePriorProb_ByTaxa, RADdata)
@@ -50,6 +53,7 @@ S3method(AddPloidyLikelihood, RADdata)
 S3method(AddPriorTimesLikelihood, RADdata)
 S3method(CanDoGetWeightedMeanGeno, RADdata)
 S3method(EstimateContaminationRate, RADdata)
+S3method(EstimateParentalGenotypes, RADdata)
 S3method(GetAlleleNames, RADdata)
 S3method(GetBlankTaxa, RADdata)
 S3method(GetContamRate, RADdata)
@@ -61,7 +65,10 @@ S3method(GetProbableGenotypes, RADdata)
 S3method(GetRecurrentParent, RADdata)
 S3method(GetTaxa, RADdata)
 S3method(GetWeightedMeanGenotypes, RADdata)
+S3method(HindHe, RADdata)
+S3method(HindHeMapping, RADdata)
 S3method(LocusInfo, RADdata)
+S3method(MergeIdenticalHaplotypes, RADdata)
 S3method(MergeRareHaplotypes, RADdata)
 S3method(MergeTaxaDepth, RADdata)
 S3method(nAlleles, RADdata)
