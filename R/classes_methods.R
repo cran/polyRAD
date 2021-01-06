@@ -12,6 +12,9 @@ RADdata <- function(alleleDepth, alleles2loc, locTable, possiblePloidies,
   if(any(is.na(alleleDepth))){
     stop("There should be no missing data in alleleDepth; put 0 for zero depth.")
   }
+  if(is.null(rownames(alleleDepth))){
+    stop("alleleDepth must have taxa names as row names.")
+  }
   if(length(alleles2loc) != dim(alleleDepth)[[2]]){
     stop("There must be one value of alleles2loc for each column of alleleDepth.")
   }
@@ -1613,6 +1616,7 @@ SubsetByLocus.RADdata <- function(object, loci, ...){
   splitRADdata$depthRatio <- object$depthRatio[, thesealleles, drop = FALSE]
   splitRADdata$antiAlleleDepth <- object$antiAlleleDepth[, thesealleles, drop = FALSE]
   splitRADdata$alleleNucleotides <- object$alleleNucleotides[thesealleles]
+  attr(splitRADdata$alleleNucleotides, "Variable_sites_only") <- attr(object$alleleNucleotides, "Variable_sites_only")
   
   # additional components that may exist if some processing has already been done
   if(!is.null(object$depthSamplingPermutations)){
@@ -1621,6 +1625,7 @@ SubsetByLocus.RADdata <- function(object, loci, ...){
   }
   if(!is.null(object$alleleFreq)){
     splitRADdata$alleleFreq <- object$alleleFreq[thesealleles]
+    attr(splitRADdata$alleleFreq, "type") <- attr(object$alleleFreq, "type")
   }
   if(!is.null(object$genotypeLikelihood)){
     splitRADdata$genotypeLikelihood <- 
@@ -1971,7 +1976,9 @@ MergeRareHaplotypes.RADdata <- function(object, min.ind.with.haplotype = 10,
   object$alleleDepth <- object$alleleDepth[,-allelesToRemove]
   object$antiAlleleDepth <- object$antiAlleleDepth[,-allelesToRemove]
   object$depthRatio <- object$depthRatio[,-allelesToRemove]
+  varsiteonly <- attr(object$alleleNucleotides, "Variable_sites_only")
   object$alleleNucleotides <- object$alleleNucleotides[-allelesToRemove]
+  attr(object$alleleNucleotides, "Variable_sites_only") <- varsiteonly
   object$alleles2loc <- object$alleles2loc[-allelesToRemove]
   return(object)
 } # end of MergeRareHaplotypes
@@ -2307,7 +2314,9 @@ MergeIdenticalHaplotypes.RADdata <- function(object, ...){
   object$alleleDepth <- object$alleleDepth[,-remal]
   object$antiAlleleDepth <- object$antiAlleleDepth[,-remal]
   object$alleles2loc <- object$alleles2loc[-remal]
+  varsiteonly <- attr(object$alleleNucleotides, "Variable_sites_only")
   object$alleleNucleotides <- object$alleleNucleotides[-remal]
+  attr(object$alleleNucleotides, "Variable_sites_only") <- varsiteonly
   object$depthRatio <- object$depthRatio[,-remal]
   
   return(object)

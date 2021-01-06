@@ -17,6 +17,10 @@ BestPloidies <- function(chisq) {
     .Call('_polyRAD_BestPloidies', PACKAGE = 'polyRAD', chisq)
 }
 
+FormatStructure <- function(genotypes, alleles2loc, ploidy) {
+    .Call('_polyRAD_FormatStructure', PACKAGE = 'polyRAD', genotypes, alleles2loc, ploidy)
+}
+
 GiniSimpson <- function(counts) {
     .Call('_polyRAD_GiniSimpson', PACKAGE = 'polyRAD', counts)
 }
@@ -51,6 +55,14 @@ MakeGTstrings <- function(genotypes, ploidy) {
 
 PrepVCFexport <- function(genotypes, alleles2loc, alleleDepth, alleleNucleotides, locTable, ploidy, asSNPs) {
     .Call('_polyRAD_PrepVCFexport', PACKAGE = 'polyRAD', genotypes, alleles2loc, alleleDepth, alleleNucleotides, locTable, ploidy, asSNPs)
+}
+
+simGeno <- function(alleleFreq, alleles2loc, nsam, inbreeding, ploidy) {
+    .Call('_polyRAD_simGeno', PACKAGE = 'polyRAD', alleleFreq, alleles2loc, nsam, inbreeding, ploidy)
+}
+
+simAD <- function(locDepth, genotypes, alleles2loc, overdispersion) {
+    .Call('_polyRAD_simAD', PACKAGE = 'polyRAD', locDepth, genotypes, alleles2loc, overdispersion)
 }
 
 ThirdDimProd <- function(probs, ngen, ntaxa) {

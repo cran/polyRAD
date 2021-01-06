@@ -141,6 +141,18 @@ hist(myhindheByLoc, col = "lightgrey",
 abline(v = 0.5, col = "blue", lwd = 2)
 
 ## -----------------------------------------------------------------------------
+InbreedingFromHindHe(0.35, ploidy = 2)
+
+## -----------------------------------------------------------------------------
+set.seed(803)
+ExpectedHindHe(mydata, inbreeding = 0.3, ploidy = 2, reps = 10)
+
+## -----------------------------------------------------------------------------
+mean(myhindheByLoc < 0.24) # about 29% of markers would be removed
+keeploci <- names(myhindheByLoc)[myhindheByLoc >= 0.24]
+mydata <- SubsetByLocus(mydata, keeploci)
+
+## -----------------------------------------------------------------------------
 overdispersionP <- TestOverdispersion(mydata, to_test = 8:10)
 qq(overdispersionP[["8"]])
 qq(overdispersionP[["9"]])
@@ -180,7 +192,7 @@ myChiSqRat <- tapply(myChiSqRat, mydataPopStruct$alleles2loc, mean)
 allelesPerLoc <- as.vector(table(mydataPopStruct$alleles2loc))
 
 library(ggplot2)
-ggplot(mapping = aes(x = myhindheByLoc, y = myChiSqRat, fill = as.factor(allelesPerLoc))) +
+ggplot(mapping = aes(x = myhindheByLoc[GetLoci(mydata)], y = myChiSqRat, fill = as.factor(allelesPerLoc))) +
   geom_point(shape = 21, size = 3) +
   labs(x = "Hind/He", y = "Ratio of Chi-squared values, diploid to allotetraploid",
        fill = "Alleles per locus") +
@@ -197,7 +209,7 @@ wmgenoPopStruct[1:10,1:5]
 #  TotDepthT <- rowSums(mydata$locDepth)
 
 ## -----------------------------------------------------------------------------
-print(load(system.file("extdata", "MsaHindHe.RData", package = "polyRAD")))
+print(load(system.file("extdata", "MsaHindHe0.RData", package = "polyRAD")))
 
 ## -----------------------------------------------------------------------------
 myHindHeByInd <- rowMeans(myHindHe, na.rm = TRUE)

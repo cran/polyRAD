@@ -870,7 +870,11 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
       thisAlCol <- (1:thisNallele) + currAl
       if(currAl + thisNallele > ncol(alleleDepth)){
         message("Exceeded expected number of alleles; processing may slow.")
-        alleleDepth <- cbind(alleleDepth[,1:currAl], thisAlDepth)
+        if(currAl == 0){
+          alleleDepth <- thisAlDepth
+        } else {
+          alleleDepth <- cbind(alleleDepth[,1:currAl], thisAlDepth)
+        }
       } else {
         alleleDepth[,thisAlCol] <- thisAlDepth
       }
@@ -879,7 +883,11 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
       alleleNucleotides[thisAlCol] <- thisAlleleNucleotides
       if(currLoc + thisNloc > nrow(locTable)){
         message("Exceeded expected number of loci; processing may slow.")
-        locTable <- rbind(locTable[1:currLoc,], thisLocTable)
+        if(currLoc == 0){
+          locTable <- thisLocTable
+        } else {
+          locTable <- rbind(locTable[1:currLoc,], thisLocTable)
+        }
       } else {
         locTable[(1:thisNloc) + currLoc, ] <- thisLocTable
       }
@@ -918,7 +926,7 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
   radout <- RemoveMonomorphicLoci(radout)
   
   # indicate whether non-variable sites included in alleleNucleotides
-  attr(radout$alleleNucleotides, "Variable_sites_only") <- is.null(refgenome)
+  attr(radout$alleleNucleotides, "Variable_sites_only") <- is.null(refgenome) && phaseSNPs
   
   return(radout)
 }
@@ -1261,7 +1269,7 @@ readProcessSamMulti <- function(alignfile, depthfile = sub("align", "depth", ali
                       quiet = TRUE)
   depthheader <- scan(depthcon, sep = ",", nlines = 1, what = character(),
                       quiet = TRUE)
-  nalign <- (length(alignheader) - 1) / 3 # number of alignment positions reported
+  nalign <- (length(alignheader) - 1) / 4 # number of alignment positions reported
   samples <- depthheader[-1]
   nsam <- length(samples)
   
