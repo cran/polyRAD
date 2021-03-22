@@ -66,7 +66,7 @@ mydata2 <- PipelineMapping2Parents(mydata,
                                    useLinkage = FALSE,
                                    minLikelihoodRatio = 2)
 
-## ----message = FALSE, warning = FALSE-----------------------------------------
+## ----message = FALSE, warning = FALSE, eval = requireNamespace("qqman", quietly = TRUE)----
 library(qqman)
 overdispersionP <- TestOverdispersion(mydata2, to_test = 6:10)
 qq(overdispersionP[["6"]])
@@ -119,7 +119,12 @@ round(mywm[c(276, 277, 1:5), 10:13], 3)
 mydata$likelyGeno_donor[,19:26]
 mydata$likelyGeno_recurrent[,19:26]
 
-## ----message=FALSE, warning=FALSE---------------------------------------------
+## ----echo = FALSE-------------------------------------------------------------
+# Determine if VariantAnnotation is installed, so we know whether to
+# execute the rest of the vignette.
+haveVA <- requireNamespace("VariantAnnotation", quietly = TRUE)
+
+## ----message=FALSE, warning=FALSE, eval = haveVA------------------------------
 library(VariantAnnotation)
 
 myVCF <- system.file("extdata", "Msi01genes.vcf", package = "polyRAD")
@@ -128,10 +133,14 @@ myVCF <- system.file("extdata", "Msi01genes.vcf", package = "polyRAD")
 #  mybg <- bgzip(myVCF)
 #  indexTabix(mybg, format = "vcf")
 
-## -----------------------------------------------------------------------------
+## ----eval = haveVA------------------------------------------------------------
 mydata <- VCF2RADdata(myVCF, possiblePloidies = list(2, c(2,2)),
                       expectedLoci = 100, expectedAlleles = 500)
 mydata
+
+## ----echo = FALSE, eval = !haveVA---------------------------------------------
+#  # If we don't have VariantAnnotation, load in the dataset
+#  load(system.file("extdata", "vcfdata.RData", package = "polyRAD"))
 
 ## -----------------------------------------------------------------------------
 myhindhe <- HindHe(mydata)
@@ -152,7 +161,7 @@ mean(myhindheByLoc < 0.24) # about 29% of markers would be removed
 keeploci <- names(myhindheByLoc)[myhindheByLoc >= 0.24]
 mydata <- SubsetByLocus(mydata, keeploci)
 
-## -----------------------------------------------------------------------------
+## ----eval = requireNamespace("qqman", quietly = TRUE)-------------------------
 overdispersionP <- TestOverdispersion(mydata, to_test = 8:10)
 qq(overdispersionP[["8"]])
 qq(overdispersionP[["9"]])
@@ -186,7 +195,7 @@ plot(mydataPopStruct$ploidyChiSq[1,], mydataPopStruct$ploidyChiSq[2,],
      ylab = "Chi-squared for allotetraploid model", log = "xy")
 abline(a = 0, b = 1, col = "blue", lwd = 2)
 
-## -----------------------------------------------------------------------------
+## ----message = FALSE, eval = requireNamespace("ggplot2", quietly = TRUE)------
 myChiSqRat <- mydataPopStruct$ploidyChiSq[1,] / mydataPopStruct$ploidyChiSq[2,]
 myChiSqRat <- tapply(myChiSqRat, mydataPopStruct$alleles2loc, mean)
 allelesPerLoc <- as.vector(table(mydataPopStruct$alleles2loc))
@@ -214,7 +223,7 @@ print(load(system.file("extdata", "MsaHindHe0.RData", package = "polyRAD")))
 ## -----------------------------------------------------------------------------
 myHindHeByInd <- rowMeans(myHindHe, na.rm = TRUE)
 
-## -----------------------------------------------------------------------------
+## ----eval = requireNamespace("ggplot2", quietly = TRUE)-----------------------
 ggplot(data.frame(Depth = TotDepthT, HindHe = myHindHeByInd,
                   Ploidy = ploidies),
   mapping = aes(x = Depth, y = HindHe, color = Ploidy)) +

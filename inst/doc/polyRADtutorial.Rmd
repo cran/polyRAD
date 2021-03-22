@@ -72,6 +72,7 @@ For exporting the estimated genotypes to other software:
 * `Export_MAPpoly`
 * `Export_GWASpoly`
 * `Export_Structure`
+* `Export_adegenet_genind`
 * `RADdata2VCF`
 
 If you need continuous numerical genotypes exported in some other format, see 
@@ -273,7 +274,7 @@ deviate from what would be expected under binomial distibution?  The
 `TestOverdispersion` function will help us here.  We will use the `qqman`
 package to visualize the results.
 
-```{r message = FALSE, warning = FALSE}
+```{r message = FALSE, warning = FALSE, eval = requireNamespace("qqman", quietly = TRUE)}
 library(qqman)
 overdispersionP <- TestOverdispersion(mydata2, to_test = 6:10)
 qq(overdispersionP[["6"]])
@@ -447,7 +448,13 @@ for installation instructions.
 Again, with your own dataset you will not need to use `system.file` (see 
 section on mapping populations).
 
-```{r message=FALSE, warning=FALSE}
+```{r echo = FALSE}
+# Determine if VariantAnnotation is installed, so we know whether to
+# execute the rest of the vignette.
+haveVA <- requireNamespace("VariantAnnotation", quietly = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, eval = haveVA}
 library(VariantAnnotation)
 
 myVCF <- system.file("extdata", "Msi01genes.vcf", package = "polyRAD")
@@ -468,10 +475,15 @@ very low values; in a real dataset they should reflect how much data you are
 actually expecting.  It is best to slightly overestimate the number of expected
 alleles and loci.
 
-```{r}
+```{r eval = haveVA}
 mydata <- VCF2RADdata(myVCF, possiblePloidies = list(2, c(2,2)),
                       expectedLoci = 100, expectedAlleles = 500)
 mydata
+```
+
+```{r echo = FALSE, eval = !haveVA}
+# If we don't have VariantAnnotation, load in the dataset
+load(system.file("extdata", "vcfdata.RData", package = "polyRAD"))
 ```
 
 ### Quality control and parameter estimation
@@ -526,7 +538,7 @@ mydata <- SubsetByLocus(mydata, keeploci)
 For natural populations and diversity panels, we can run `TestOverdispersion`
 before performing any genotype calling.
 
-```{r}
+```{r eval = requireNamespace("qqman", quietly = TRUE)}
 overdispersionP <- TestOverdispersion(mydata, to_test = 8:10)
 qq(overdispersionP[["8"]])
 qq(overdispersionP[["9"]])
@@ -611,7 +623,7 @@ abline(a = 0, b = 1, col = "blue", lwd = 2)
 It seems that some markers look allotetraploid, and others look diploid.  We can
 see if this matches $H_{ind}/H_E$ results.
 
-```{r}
+```{r message = FALSE, eval = requireNamespace("ggplot2", quietly = TRUE)}
 myChiSqRat <- mydataPopStruct$ploidyChiSq[1,] / mydataPopStruct$ploidyChiSq[2,]
 myChiSqRat <- tapply(myChiSqRat, mydataPopStruct$alleles2loc, mean)
 allelesPerLoc <- as.vector(table(mydataPopStruct$alleles2loc))
@@ -690,7 +702,7 @@ myHindHeByInd <- rowMeans(myHindHe, na.rm = TRUE)
 
 Then we can plot these versus depth for each ploidy.
 
-```{r}
+```{r eval = requireNamespace("ggplot2", quietly = TRUE)}
 ggplot(data.frame(Depth = TotDepthT, HindHe = myHindHeByInd,
                   Ploidy = ploidies),
   mapping = aes(x = Depth, y = HindHe, color = Ploidy)) +
