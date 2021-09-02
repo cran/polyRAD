@@ -47,18 +47,26 @@ hhByLoc <- colMeans(hh, na.rm = TRUE)
 
 hist(hhByLoc, breaks = 50, xlab = "Hind/He", main = "Loci", col = "lightgrey")
 
-## -----------------------------------------------------------------------------
-InbreedingFromHindHe(hindhe = 0.3, ploidy = 2)
+## ----eval = FALSE-------------------------------------------------------------
+#  overdispersionP <- TestOverdispersion(myRADprelim, to_test = 8:10)
+
+## ----echo = FALSE-------------------------------------------------------------
+load(system.file("extdata", "MsaOverdispersion.RData", package = "polyRAD"))
+
+## ----eval = requireNamespace("qqman", quietly = TRUE)-------------------------
+qqman::qq(overdispersionP[["8"]])
+qqman::qq(overdispersionP[["9"]])
+qqman::qq(overdispersionP[["10"]])
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  ExpectedHindHe(myRADprelim, inbreeding = 0.4, ploidy = 2)
+#  ExpectedHindHe(myRADprelim, inbreeding = 0.37, ploidy = 2)
 
 ## ----echo = FALSE-------------------------------------------------------------
 message("Simulating rep 1")
 message("Completed 5 simulation reps")
-cat(c("Mean Hind/He: 0.293",
-      "Standard deviation: 0.0881",
-      "95% of observations are between 0.149 and 0.469"), sep = "\n")
+cat(c("Mean Hind/He: 0.307",
+      "Standard deviation: 0.0879",
+      "95% of observations are between 0.162 and 0.509"), sep = "\n")
 load(system.file("extdata", "MsaHindHe3.RData", package = "polyRAD"))
 hist(testhhdist, xlab = "Hind/He", main = "Expected distribution of Hind/He",
      breaks = 30)

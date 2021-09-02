@@ -237,6 +237,18 @@ polyRADsubmat <- matrix(c(0,1,1,1, 0,0,0,1,1,1, 0,0,0,1, 0,1,1, # A
                                            'S', 'Y', 'K', 'V', 'H', 'D', 'B', 
                                            'N', '-', '.')))
 
+# Reverse complement; set up as S4 method to be compatible with Biostrings
+setGeneric("reverseComplement", signature="x",
+           function(x, ...) standardGeneric("reverseComplement")
+)
+setMethod("reverseComplement", "character",
+          function(x, ...){
+            stri_reverse(stri_trans_char(x,
+                                         "ACGTRYSWKMBDHVNacgtryswkmbdhvn",
+                                         "TGCAYRSWMKVHDBNtgcayrswmkvhdbn"))
+          } 
+)
+
 #### Getting genotype priors in mapping pops and simulating selfing ####
 
 # function to generate all gamete genotypes for a set of genotypes.
@@ -431,13 +443,9 @@ polyRADsubmat <- matrix(c(0,1,1,1, 0,0,0,1,1,1, 0,0,0,1, 0,1,1, # A
   
   return(list(outprog, outprob))
 }
-# Probability that, depending on the generation, two alleles sampled in a progeny
-# are different locus copies from the same parent, or from different parents.
-# If there is backcrossing, parent 1 is the recurrent parent.
-# (No double reduction.)
-# Can take a few seconds to run if there are many generations, but it is only
-# intended to be run once for the whole dataset.
-.progAlProbs <- function(ploidy, gen_backcrossing, gen_selfing){
+
+# Build progeny probability object for given mapping population properties
+.buildProgProb <- function(ploidy, gen_backcrossing, gen_selfing){
   # set up parents; number indexes locus copy
   p1 <- 1:ploidy
   p2 <- p1 + ploidy
@@ -469,6 +477,21 @@ polyRADsubmat <- matrix(c(0,1,1,1, 0,0,0,1,1,1, 0,0,0,1, 0,1,1, # A
       progprob <- .consolProgProb(allprogprobs)
     }
   }
+  return(progprob)
+}
+
+# Probability that, depending on the generation, two alleles sampled in a progeny
+# are different locus copies from the same parent, or from different parents.
+# If there is backcrossing, parent 1 is the recurrent parent.
+# (No double reduction.)
+# Can take a few seconds to run if there are many generations, but it is only
+# intended to be run once for the whole dataset.
+.progAlProbs <- function(ploidy, gen_backcrossing, gen_selfing){
+  # set up parents; number indexes locus copy
+  p1 <- 1:ploidy
+  p2 <- p1 + ploidy
+  # probabilities of progeny genotypes
+  progprob <- .buildProgProb(ploidy, gen_backcrossing, gen_selfing)
   
   # total probability that (without replacement, from individual progeny):
   diffp1 <- 0 # two different locus copies, both from parent 1, are sampled

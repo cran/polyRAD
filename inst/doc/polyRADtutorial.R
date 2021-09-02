@@ -51,15 +51,6 @@ keeptaxa <- c(realprogeny, GetDonorParent(mydata), GetRecurrentParent(mydata))
 mydata <- SubsetByTaxon(mydata, taxa = keeptaxa)
 plot(mydata)
 
-## ----message = FALSE----------------------------------------------------------
-myhindhe <- HindHeMapping(mydata, ploidy = 2L)
-hist(colMeans(myhindhe, na.rm = TRUE), col = "lightgrey",
-     xlab = "Hind/He", main = "Histogram of Hind/He by locus")
-
-## -----------------------------------------------------------------------------
-goodMarkers <- colnames(myhindhe)[which(colMeans(myhindhe, na.rm = TRUE) < 0.5)]
-mydata <- SubsetByLocus(mydata, goodMarkers)
-
 ## -----------------------------------------------------------------------------
 mydata2 <- PipelineMapping2Parents(mydata, 
                                    freqAllowedDeviation = 0.06,
@@ -75,6 +66,20 @@ qq(overdispersionP[["8"]])
 qq(overdispersionP[["9"]])
 qq(overdispersionP[["10"]])
 
+## ----message = FALSE----------------------------------------------------------
+myhindhe <- HindHeMapping(mydata, ploidy = 2L)
+hist(colMeans(myhindhe, na.rm = TRUE), col = "lightgrey",
+     xlab = "Hind/He", main = "Histogram of Hind/He by locus")
+
+## -----------------------------------------------------------------------------
+set.seed(720)
+ExpectedHindHeMapping(mydata, ploidy = 2, overdispersion = 9, reps = 2)
+
+## -----------------------------------------------------------------------------
+goodMarkers <- colnames(myhindhe)[which(colMeans(myhindhe, na.rm = TRUE) < 0.5 &
+                                          colMeans(myhindhe, na.rm = TRUE) > 0.4)]
+mydata <- SubsetByLocus(mydata, goodMarkers)
+
 ## -----------------------------------------------------------------------------
 mydata <- PipelineMapping2Parents(mydata, 
                                   freqAllowedDeviation = 0.06,
@@ -85,16 +90,16 @@ mydata <- PipelineMapping2Parents(mydata,
 table(mydata$alleleFreq)
 
 ## -----------------------------------------------------------------------------
-mydata$alleleDepth[8,19:26]
-mydata$genotypeLikelihood[[1]][,8,19:26]
-mydata$genotypeLikelihood[[2]][,8,19:26]
+mydata$alleleDepth[8,9:16]
+mydata$genotypeLikelihood[[1]][,8,9:16]
+mydata$genotypeLikelihood[[2]][,8,9:16]
 
 ## -----------------------------------------------------------------------------
-mydata$priorProb[[1]][,19:26]
-mydata$priorProb[[2]][,19:26]
+mydata$priorProb[[1]][,9:16]
+mydata$priorProb[[2]][,9:16]
 
 ## -----------------------------------------------------------------------------
-mydata$ploidyChiSq[,19:26]
+mydata$ploidyChiSq[,9:16]
 
 ## -----------------------------------------------------------------------------
 plot(mydata$ploidyChiSq[1,], mydata$ploidyChiSq[2,], 
@@ -102,8 +107,8 @@ plot(mydata$ploidyChiSq[1,], mydata$ploidyChiSq[2,],
      ylab = "Chi-squared for tetraploid model")
 
 ## -----------------------------------------------------------------------------
-mydata$posteriorProb[[1]][,10,19:26]
-mydata$posteriorProb[[2]][,10,19:26]
+mydata$posteriorProb[[1]][,10,9:16]
+mydata$posteriorProb[[2]][,10,9:16]
 
 ## -----------------------------------------------------------------------------
 mydata <- SubsetByPloidy(mydata, ploidies = list(2))
@@ -116,8 +121,8 @@ mywm <- GetWeightedMeanGenotypes(mydata)
 round(mywm[c(276, 277, 1:5), 10:13], 3)
 
 ## -----------------------------------------------------------------------------
-mydata$likelyGeno_donor[,19:26]
-mydata$likelyGeno_recurrent[,19:26]
+mydata$likelyGeno_donor[,9:16]
+mydata$likelyGeno_recurrent[,9:16]
 
 ## ----echo = FALSE-------------------------------------------------------------
 # Determine if VariantAnnotation is installed, so we know whether to
@@ -142,6 +147,12 @@ mydata
 #  # If we don't have VariantAnnotation, load in the dataset
 #  load(system.file("extdata", "vcfdata.RData", package = "polyRAD"))
 
+## ----eval = requireNamespace("qqman", quietly = TRUE)-------------------------
+overdispersionP <- TestOverdispersion(mydata, to_test = 8:10)
+qq(overdispersionP[["8"]])
+qq(overdispersionP[["9"]])
+qq(overdispersionP[["10"]])
+
 ## -----------------------------------------------------------------------------
 myhindhe <- HindHe(mydata)
 myhindheByLoc <- colMeans(myhindhe, na.rm = TRUE)
@@ -150,22 +161,14 @@ hist(myhindheByLoc, col = "lightgrey",
 abline(v = 0.5, col = "blue", lwd = 2)
 
 ## -----------------------------------------------------------------------------
-InbreedingFromHindHe(0.35, ploidy = 2)
-
-## -----------------------------------------------------------------------------
 set.seed(803)
-ExpectedHindHe(mydata, inbreeding = 0.3, ploidy = 2, reps = 10)
+ExpectedHindHe(mydata, inbreeding = 0.25, ploidy = 2, overdispersion = 9,
+               reps = 10)
 
 ## -----------------------------------------------------------------------------
-mean(myhindheByLoc < 0.24) # about 29% of markers would be removed
-keeploci <- names(myhindheByLoc)[myhindheByLoc >= 0.24]
+mean(myhindheByLoc < 0.25) # about 33% of markers would be removed
+keeploci <- names(myhindheByLoc)[myhindheByLoc >= 0.25]
 mydata <- SubsetByLocus(mydata, keeploci)
-
-## ----eval = requireNamespace("qqman", quietly = TRUE)-------------------------
-overdispersionP <- TestOverdispersion(mydata, to_test = 8:10)
-qq(overdispersionP[["8"]])
-qq(overdispersionP[["9"]])
-qq(overdispersionP[["10"]])
 
 ## ----message = FALSE----------------------------------------------------------
 mydataHWE <- IterateHWE(mydata, tol = 1e-3, overdispersion = 9)
@@ -254,7 +257,7 @@ abline(v = 0.75, col = "blue", lwd = 2)
 
 ## -----------------------------------------------------------------------------
 goodLoci <- colnames(myHindHe)[myHindHeByLoc2x < 0.5 & myHindHeByLoc4x < 0.75]
-length(goodLoci) # 3233 out of 5182 markers retained
+length(goodLoci) # 611 out of 1000 markers retained
 head(goodLoci)
 
 ## ----eval = FALSE-------------------------------------------------------------

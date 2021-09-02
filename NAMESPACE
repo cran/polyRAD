@@ -8,10 +8,10 @@ AddGenotypePriorProb_HWE, AddGenotypePriorProb_LD,
 AddGenotypePriorProb_Mapping2Parents, AddPCA,
 AddPloidyChiSq, AddPloidyLikelihood, AddPriorTimesLikelihood,
 CanDoGetWeightedMeanGeno, EstimateContaminationRate, 
-EstimateParentalGenotypes, ExpectedHindHe, Export_adegenet_genind, ExportGAPIT,
-Export_GWASpoly,
-Export_MAPpoly, Export_polymapR, Export_rrBLUP_Amat, Export_rrBLUP_GWAS,
-Export_Structure, Export_TASSEL_Numeric, GetAlleleNames,
+EstimateParentalGenotypes, ExpectedHindHe, ExpectedHindHeMapping,
+Export_adegenet_genind, ExportGAPIT, Export_GWASpoly,
+Export_MAPpoly, Export_polymapR, Export_polymapR_probs, Export_rrBLUP_Amat,
+Export_rrBLUP_GWAS, Export_Structure, Export_TASSEL_Numeric, GetAlleleNames,
 GetBlankTaxa, GetContamRate, GetDonorParent, GetLikelyGen, 
 GetLocDepth, GetLoci, GetProbableGenotypes, GetRecurrentParent, 
 GetTaxa, GetWeightedMeanGenotypes, HindHe, HindHeMapping,
@@ -19,22 +19,25 @@ InbreedingFromHindHe, IterateHWE, IterateHWE_LD,
 IteratePopStruct, IteratePopStructLD, LocusInfo, MakeTasselVcfFilter,
 MergeIdenticalHaplotypes, MergeRareHaplotypes, MergeTaxaDepth, nTaxa, nAlleles,
 nLoci, OneAllelePerMarker, 
-PipelineMapping2Parents, RADdata, RADdata2VCF, readHMC, readProcessSamMulti,
-readProcessIsoloci,readStacks, readTagDigger, readTASSELGBSv2,
+PipelineMapping2Parents, RADdata, RADdata2VCF, readHMC, readDArTag,
+readProcessSamMulti, readProcessIsoloci,
+readStacks, readTagDigger, readTASSELGBSv2,
 RemoveHighDepthLoci, RemoveMonomorphicLoci, RemoveUngenotypedLoci,
 SetBlankTaxa, SetContamRate, SetDonorParent, SetRecurrentParent,
-SimAlleleDepth, SimGenotypes,
+SimAlleleDepth, SimGenotypes, SimGenotypesMapping,
 SplitByChromosome, StripDown, SubsetByLocus, SubsetByPloidy, SubsetByTaxon,
 TestOverdispersion, VCF2RADdata)
 
 importFrom("stats", "dist", "dmultinom", "pchisq", "lm", "na.omit", "dbinom",
            "hclust", "cutree", "as.dist", "cor", "residuals", "lm.fit", "sd",
            "median", "quantile")
-importFrom("utils", "read.csv", "write.table", "write.csv", "packageVersion")
+importFrom("utils", "read.csv", "read.table","write.table", "write.csv",
+           "packageVersion")
 importFrom("fastmatch", "%fin%")
-importFrom("methods", "is")
+importFrom("methods", "is", "setGeneric", "setMethod")
 importFrom("Rcpp", "evalCpp")
 importFrom("graphics", "plot", "points", "text", "hist")
+importFrom("stringi", "stri_reverse", "stri_trans_char")
 
 S3method(print, RADdata)
 S3method(AddAlleleFreqByTaxa, RADdata)
@@ -91,3 +94,5 @@ S3method(SubsetByPloidy, RADdata)
 S3method(SubsetByTaxon, RADdata)
 S3method(StripDown, RADdata)
 S3method(TestOverdispersion, RADdata)
+
+exportMethods(reverseComplement)

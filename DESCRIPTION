@@ -1,6 +1,6 @@
 Package: polyRAD
-Version: 1.4
-Date: 2021-03-15
+Version: 1.5
+Date: 2021-09-02
 Title: Genotype Calling with Uncertainty from Sequencing Data in
         Polyploids and Diploids
 Authors@R: c(person("Lindsay V.", "Clark", email = "lvclark@illinois.edu",
@@ -10,8 +10,8 @@ Authors@R: c(person("Lindsay V.", "Clark", email = "lvclark@illinois.edu",
 Author: Lindsay V. Clark [aut, cre] (<https://orcid.org/0000-0002-3881-9252>),
   U.S. National Science Foundation [fnd]
 Maintainer: Lindsay V. Clark <lvclark@illinois.edu>
-Depends: R (>= 3.5.0)
-Imports: fastmatch, pcaMethods, methods, Rcpp
+Depends: R (>= 3.5.0), methods
+Imports: fastmatch, pcaMethods, Rcpp, stringi
 Suggests: rrBLUP, Rsamtools, GenomeInfoDb, Biostrings, GenomicRanges,
         VariantAnnotation, SummarizedExperiment, S4Vectors, IRanges,
         BiocGenerics, knitr, rmarkdown, GenomicFeatures, qqman,
@@ -29,6 +29,6 @@ Description: Read depth data from genotyping-by-sequencing (GBS) or restriction
 License: GPL (>= 2)
 URL: https://github.com/lvclark/polyRAD
 NeedsCompilation: yes
-Packaged: 2021-03-19 19:24:39 UTC; lvclark
+Packaged: 2021-09-02 13:50:17 UTC; lvclark
 Repository: CRAN
-Date/Publication: 2021-03-22 23:00:03 UTC
+Date/Publication: 2021-09-02 22:20:02 UTC
