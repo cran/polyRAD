@@ -57,14 +57,14 @@ mydata2 <- PipelineMapping2Parents(mydata,
                                    useLinkage = FALSE,
                                    minLikelihoodRatio = 2)
 
-## ----message = FALSE, warning = FALSE, eval = requireNamespace("qqman", quietly = TRUE)----
-library(qqman)
-overdispersionP <- TestOverdispersion(mydata2, to_test = 6:10)
-qq(overdispersionP[["6"]])
-qq(overdispersionP[["7"]])
-qq(overdispersionP[["8"]])
-qq(overdispersionP[["9"]])
-qq(overdispersionP[["10"]])
+## -----------------------------------------------------------------------------
+overdispersionP <- TestOverdispersion(mydata2, to_test = 8:15)
+
+sapply(overdispersionP[names(overdispersionP) != "optimal"],
+       quantile, probs = c(0.01, 0.25, 0.5, 0.75, 0.99))
+
+## -----------------------------------------------------------------------------
+my_ovdisp <- overdispersionP$optimal
 
 ## ----message = FALSE----------------------------------------------------------
 myhindhe <- HindHeMapping(mydata, ploidy = 2L)
@@ -73,33 +73,34 @@ hist(colMeans(myhindhe, na.rm = TRUE), col = "lightgrey",
 
 ## -----------------------------------------------------------------------------
 set.seed(720)
-ExpectedHindHeMapping(mydata, ploidy = 2, overdispersion = 9, reps = 2)
+ExpectedHindHeMapping(mydata, ploidy = 2, overdispersion = my_ovdisp, reps = 2,
+                      contamRate = 0.001, errorRate = 0.001)
 
 ## -----------------------------------------------------------------------------
-goodMarkers <- colnames(myhindhe)[which(colMeans(myhindhe, na.rm = TRUE) < 0.5 &
-                                          colMeans(myhindhe, na.rm = TRUE) > 0.4)]
+goodMarkers <- colnames(myhindhe)[which(colMeans(myhindhe, na.rm = TRUE) < 0.53 &
+                                          colMeans(myhindhe, na.rm = TRUE) > 0.43)]
 mydata <- SubsetByLocus(mydata, goodMarkers)
 
 ## -----------------------------------------------------------------------------
 mydata <- PipelineMapping2Parents(mydata, 
                                   freqAllowedDeviation = 0.06,
-                                  useLinkage = TRUE, overdispersion = 9,
+                                  useLinkage = TRUE, overdispersion = my_ovdisp,
                                   minLikelihoodRatio = 2)
 
 ## -----------------------------------------------------------------------------
 table(mydata$alleleFreq)
 
 ## -----------------------------------------------------------------------------
-mydata$alleleDepth[8,9:16]
-mydata$genotypeLikelihood[[1]][,8,9:16]
-mydata$genotypeLikelihood[[2]][,8,9:16]
+mydata$alleleDepth["Map1-089",1:8]
+mydata$genotypeLikelihood[[1]][,"Map1-089",1:8]
+mydata$genotypeLikelihood[[2]][,"Map1-089",1:8]
 
 ## -----------------------------------------------------------------------------
-mydata$priorProb[[1]][,9:16]
-mydata$priorProb[[2]][,9:16]
+mydata$priorProb[[1]][,1:8]
+mydata$priorProb[[2]][,1:8]
 
 ## -----------------------------------------------------------------------------
-mydata$ploidyChiSq[,9:16]
+mydata$ploidyChiSq[,1:8]
 
 ## -----------------------------------------------------------------------------
 plot(mydata$ploidyChiSq[1,], mydata$ploidyChiSq[2,], 
@@ -107,8 +108,8 @@ plot(mydata$ploidyChiSq[1,], mydata$ploidyChiSq[2,],
      ylab = "Chi-squared for tetraploid model")
 
 ## -----------------------------------------------------------------------------
-mydata$posteriorProb[[1]][,10,9:16]
-mydata$posteriorProb[[2]][,10,9:16]
+mydata$posteriorProb[[1]][,"Map1-089",1:8]
+mydata$posteriorProb[[2]][,"Map1-089",1:8]
 
 ## -----------------------------------------------------------------------------
 mydata <- SubsetByPloidy(mydata, ploidies = list(2))
@@ -118,11 +119,11 @@ mydata <- RemoveUngenotypedLoci(mydata)
 
 ## -----------------------------------------------------------------------------
 mywm <- GetWeightedMeanGenotypes(mydata)
-round(mywm[c(276, 277, 1:5), 10:13], 3)
+round(mywm[c(276, 277, 1:5), 9:12], 3)
 
 ## -----------------------------------------------------------------------------
-mydata$likelyGeno_donor[,9:16]
-mydata$likelyGeno_recurrent[,9:16]
+mydata$likelyGeno_donor[,1:8]
+mydata$likelyGeno_recurrent[,1:8]
 
 ## ----echo = FALSE-------------------------------------------------------------
 # Determine if VariantAnnotation is installed, so we know whether to
@@ -147,11 +148,14 @@ mydata
 #  # If we don't have VariantAnnotation, load in the dataset
 #  load(system.file("extdata", "vcfdata.RData", package = "polyRAD"))
 
-## ----eval = requireNamespace("qqman", quietly = TRUE)-------------------------
-overdispersionP <- TestOverdispersion(mydata, to_test = 8:10)
-qq(overdispersionP[["8"]])
-qq(overdispersionP[["9"]])
-qq(overdispersionP[["10"]])
+## -----------------------------------------------------------------------------
+overdispersionP <- TestOverdispersion(mydata, to_test = 8:14)
+
+sapply(overdispersionP[names(overdispersionP) != "optimal"],
+       quantile, probs = c(0.01, 0.25, 0.5, 0.75, 0.99))
+
+## -----------------------------------------------------------------------------
+my_ovdisp <- overdispersionP$optimal
 
 ## -----------------------------------------------------------------------------
 myhindhe <- HindHe(mydata)
@@ -161,17 +165,25 @@ hist(myhindheByLoc, col = "lightgrey",
 abline(v = 0.5, col = "blue", lwd = 2)
 
 ## -----------------------------------------------------------------------------
-set.seed(803)
-ExpectedHindHe(mydata, inbreeding = 0.25, ploidy = 2, overdispersion = 9,
-               reps = 10)
+mydata <- AddAlleleFreqHWE(mydata)
+theseloci <- GetLoci(mydata)[mydata$alleles2loc[mydata$alleleFreq >= 0.05 & mydata$alleleFreq < 0.5]]
+theseloci <- unique(theseloci)
+hist(myhindheByLoc[theseloci], col = "lightgrey",
+     xlab = "Hind/He", main = "Histogram of Hind/He by locus, MAF >= 0.05")
+abline(v = 0.5, col = "blue", lwd = 2)
 
 ## -----------------------------------------------------------------------------
-mean(myhindheByLoc < 0.25) # about 33% of markers would be removed
-keeploci <- names(myhindheByLoc)[myhindheByLoc >= 0.25]
+set.seed(803)
+ExpectedHindHe(mydata, inbreeding = 0.25, ploidy = 2, overdispersion = my_ovdisp,
+               reps = 10, contamRate = 0.001, errorRate = 0.001)
+
+## -----------------------------------------------------------------------------
+mean(myhindheByLoc < 0.26) # about 33% of markers would be removed
+keeploci <- names(myhindheByLoc)[myhindheByLoc >= 0.26]
 mydata <- SubsetByLocus(mydata, keeploci)
 
 ## ----message = FALSE----------------------------------------------------------
-mydataHWE <- IterateHWE(mydata, tol = 1e-3, overdispersion = 9)
+mydataHWE <- IterateHWE(mydata, tol = 1e-3, overdispersion = 10)
 
 ## -----------------------------------------------------------------------------
 hist(mydataHWE$alleleFreq, breaks = 20, col = "lightgrey")
@@ -179,7 +191,7 @@ hist(mydataHWE$alleleFreq, breaks = 20, col = "lightgrey")
 ## ----message = FALSE----------------------------------------------------------
 set.seed(3908)
 mydataPopStruct <- IteratePopStruct(mydata, nPcsInit = 8, tol = 5e-03,
-                                    overdispersion = 9)
+                                    overdispersion = 10)
 
 ## -----------------------------------------------------------------------------
 hist(mydataPopStruct$alleleFreq, breaks = 20, col = "lightgrey")

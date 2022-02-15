@@ -29,7 +29,7 @@ TestOverdispersion.RADdata <- function(object, to_test = seq(6, 20, by = 2),
   
   # get allele counts for these genotypes
   alcnt <- object$alleleDepth[,theseal][one_copy_gen]
-  # get total read counts for thise genotypes
+  # get total read counts for these genotypes
   totcnt <- alcnt + object$antiAlleleDepth[,theseal][one_copy_gen]
   # set up values where we need distribution fn
   testcnt <- mapply(function(n, k){
@@ -76,5 +76,23 @@ TestOverdispersion.RADdata <- function(object, to_test = seq(6, 20, by = 2),
     }
   }
   
-  return(outlist)
+  # print out suggestion for best value to use; determine which follows
+  # expected values most closely.
+  expP <- ppoints(length(outlist[[1]]))
+  odscores <- sapply(outlist,
+                     function(x){
+                       sqrt(mean((sort(x) - expP) ^ 2))
+                     })
+  best <- as.numeric(names(odscores)[which.min(odscores)])
+  cat(paste0("Optimal value is ", best, "."), sep = "\n")
+  if(best == min(to_test)){
+    cat("Consider testing lower values.", sep = "\n")
+    best <- NA
+  }
+  if(best == max(to_test)){
+    cat("Consider testing higher values.", sep = "\n")
+    best <- NA
+  }
+  
+  return(c(outlist, list(optimal = best)))
 }
