@@ -8,7 +8,8 @@ maphmcfile <- system.file("extdata", "ClareMap_HapMap.hmc.txt",
 maphmcfile
 
 mydata <- readHMC(maphmcfile,
-                  possiblePloidies = list(2, c(2, 2)))
+                  possiblePloidies = list(2, c(2, 2)),
+                  taxaPloidy = 2)
 mydata
 
 ## -----------------------------------------------------------------------------
@@ -17,6 +18,10 @@ GetTaxa(mydata)[c(1:10,293:299)]
 ## -----------------------------------------------------------------------------
 mydata <- SetDonorParent(mydata, "Kaskade-Justin")
 mydata <- SetRecurrentParent(mydata, "Zebrinus-Justin")
+
+## -----------------------------------------------------------------------------
+mydata$taxaPloidy[c("IGR-2011-001", "p196-150A-c", "p877-348-b")] <- 1L
+mydata
 
 ## -----------------------------------------------------------------------------
 alignfile <- system.file("extdata", "ClareMap_alignments.csv", 
@@ -92,12 +97,12 @@ table(mydata$alleleFreq)
 
 ## -----------------------------------------------------------------------------
 mydata$alleleDepth["Map1-089",1:8]
-mydata$genotypeLikelihood[[1]][,"Map1-089",1:8]
-mydata$genotypeLikelihood[[2]][,"Map1-089",1:8]
+mydata$genotypeLikelihood[[1,"2"]][,"Map1-089",1:8]
+mydata$genotypeLikelihood[[2,"2"]][,"Map1-089",1:8]
 
 ## -----------------------------------------------------------------------------
-mydata$priorProb[[1]][,1:8]
-mydata$priorProb[[2]][,1:8]
+mydata$priorProb[[1,"2"]][,1:8]
+mydata$priorProb[[2,"2"]][,1:8]
 
 ## -----------------------------------------------------------------------------
 mydata$ploidyChiSq[,1:8]
@@ -108,8 +113,8 @@ plot(mydata$ploidyChiSq[1,], mydata$ploidyChiSq[2,],
      ylab = "Chi-squared for tetraploid model")
 
 ## -----------------------------------------------------------------------------
-mydata$posteriorProb[[1]][,"Map1-089",1:8]
-mydata$posteriorProb[[2]][,"Map1-089",1:8]
+mydata$posteriorProb[[1,"2"]][,"Map1-089",1:8]
+mydata$posteriorProb[[2,"2"]][,"Map1-089",1:8]
 
 ## -----------------------------------------------------------------------------
 mydata <- SubsetByPloidy(mydata, ploidies = list(2))
@@ -139,9 +144,18 @@ myVCF <- system.file("extdata", "Msi01genes.vcf", package = "polyRAD")
 #  mybg <- bgzip(myVCF)
 #  indexTabix(mybg, format = "vcf")
 
+## -----------------------------------------------------------------------------
+pldfile <- system.file("extdata", "Msi_ploidies.txt", package = "polyRAD")
+msi_ploidies <- read.table(pldfile, sep = "\t", header = FALSE)
+head(msi_ploidies)
+table(msi_ploidies$V2)
+pld_vect <- msi_ploidies$V2
+names(pld_vect) <- msi_ploidies$V1
+
 ## ----eval = haveVA------------------------------------------------------------
 mydata <- VCF2RADdata(myVCF, possiblePloidies = list(2, c(2,2)),
-                      expectedLoci = 100, expectedAlleles = 500)
+                      expectedLoci = 100, expectedAlleles = 500,
+                      taxaPloidy = pld_vect)
 mydata
 
 ## ----echo = FALSE, eval = !haveVA---------------------------------------------
@@ -168,7 +182,8 @@ abline(v = 0.5, col = "blue", lwd = 2)
 mydata <- AddAlleleFreqHWE(mydata)
 theseloci <- GetLoci(mydata)[mydata$alleles2loc[mydata$alleleFreq >= 0.05 & mydata$alleleFreq < 0.5]]
 theseloci <- unique(theseloci)
-hist(myhindheByLoc[theseloci], col = "lightgrey",
+myhindheByLoc2 <- colMeans(myhindhe[mydata$taxaPloidy == 2L, theseloci], na.rm = TRUE)
+hist(myhindheByLoc2, col = "lightgrey",
      xlab = "Hind/He", main = "Histogram of Hind/He by locus, MAF >= 0.05")
 abline(v = 0.5, col = "blue", lwd = 2)
 
@@ -178,8 +193,8 @@ ExpectedHindHe(mydata, inbreeding = 0.25, ploidy = 2, overdispersion = my_ovdisp
                reps = 10, contamRate = 0.001, errorRate = 0.001)
 
 ## -----------------------------------------------------------------------------
-mean(myhindheByLoc < 0.26) # about 33% of markers would be removed
-keeploci <- names(myhindheByLoc)[myhindheByLoc >= 0.26]
+mean(myhindheByLoc < 0.24) # about 29% of markers would be removed
+keeploci <- names(myhindheByLoc)[myhindheByLoc >= 0.24]
 mydata <- SubsetByLocus(mydata, keeploci)
 
 ## ----message = FALSE----------------------------------------------------------

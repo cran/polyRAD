@@ -5,7 +5,8 @@
 # If shortIndNames is TRUE, just keep the part of the individual name before
 # the first underscore.
 readHMC <- function(file, includeLoci=NULL, shortIndNames=TRUE,
-                    possiblePloidies = list(2), contamRate = 0.001,
+                    possiblePloidies = list(2), taxaPloidy = 2L,
+                    contamRate = 0.001,
                     fastafile = sub("hmc.txt", "fas.txt", file, fixed = TRUE)){
   # read in file; not using read.table, to preserve indiv. names
   filelines <- strsplit(readLines(file), split="\t")
@@ -68,12 +69,14 @@ readHMC <- function(file, includeLoci=NULL, shortIndNames=TRUE,
                  locTable = data.frame(row.names = locnames), 
                  possiblePloidies = possiblePloidies,
                  contamRate = contamRate,
-                 alleleNucleotides = alleleNucleotides))
+                 alleleNucleotides = alleleNucleotides,
+                 taxaPloidy = taxaPloidy))
 }
 
 # function to import read counts from TagDigger
 readTagDigger <- function(countfile, includeLoci = NULL, 
-                          possiblePloidies = list(2), contamRate = 0.001, 
+                          possiblePloidies = list(2), taxaPloidy = 2L,
+                          contamRate = 0.001, 
                           dbfile = NULL, dbColumnsToKeep = NULL,
                           dbChrCol = "Chr", dbPosCol = "Pos",
                           dbNameCol = "Marker name"){
@@ -148,7 +151,7 @@ readTagDigger <- function(countfile, includeLoci = NULL,
   
   # make RADdata object
   return(RADdata(mycounts, alleles2loc, mydb, possiblePloidies, contamRate,
-                 myNT))
+                 myNT, taxaPloidy))
 }
 
 # Function to consolidate loci imported from VCF back into tags.
@@ -619,7 +622,7 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
                         tol = 0.01, al.depth.field = "AD", 
                         min.ind.with.reads = 200, 
                         min.ind.with.minor.allele = 10,
-                        possiblePloidies = list(2),
+                        possiblePloidies = list(2), taxaPloidy = 2L,
                         contamRate = 0.001,
                         samples = VariantAnnotation::samples(VariantAnnotation::scanVcfHeader(file)),
                         svparam = VariantAnnotation::ScanVcfParam(fixed = "ALT",
@@ -781,42 +784,21 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
     thisAlDepth[is.na(thisAlDepth)] <- 0L
     # how many individuals have each allele
     indperal <- colSums(thisAlDepth > 0)
-    # loop to filter markers
+
+    # filter loci
     message("Filtering markers...")
-    keepLoc <- logical(thisNloc) # should loci be retained?
-    remAl <- integer(0) # list of alleles to be removed
-    iAl <- 0L # keep track of allele position for last locus
-    for(i in 1:thisNloc){
-      thiscol <- 1:(nAlt[i] + 1L) + iAl # allele columns for this locus
-      # check if it passes filtering
-      iDepth <- thisAlDepth[,thiscol, drop = FALSE]
-      if(sum(rowSums(iDepth) > 0) < min.ind.with.reads){
-        keepLoc[i] <- FALSE
-      } else {
-        keepLoc[i] <- sum(indperal[thiscol] >= min.ind.with.minor.allele) >= 2
-      }
-      # get rid of funny stuff from TASSEL-GBSv2
-      if(keepLoc[i] && any(grepl("N", thisAlleleNucleotides[thiscol]))){
-        keepLoc[i] <- FALSE
-      }
-      # pad out indels, using VCF convention of listing nucleotide before indel
-      if(keepLoc[i] && 
-         length(unique(nchar(thisAlleleNucleotides[thiscol]))) > 1){
-        thisAN <- thisAlleleNucleotides[thiscol]
-        maxWidth <- max(nchar(thisAN))
-        for(a in 1:length(thisAN)){
-          while(nchar(thisAN[a]) < maxWidth){
-            thisAN[a] <- paste(thisAN[a], "-", sep = "")
-          }
-        }
-        thisAlleleNucleotides[thiscol] <- thisAN
-      }
-      # cut the locus if it does not pass filtering
-      if(!keepLoc[i]){
-        remAl <- c(remAl, thiscol)
-      }
-      iAl <- iAl + nAlt[i] + 1L # update last allele index
-    }
+    indperloc <- rowSums(rowsum(t(thisAlDepth), thisAlleles2loc) > 0)
+    keepLoc <- indperloc >= min.ind.with.reads &
+      tapply(indperal, thisAlleles2loc,
+             function(x){
+               sum(x >= min.ind.with.minor.allele) >= 2
+             })
+    # get rid of funny stuff from TASSEL-GBSv2
+    locWithN <- unique(thisAlleles2loc[grep("N", thisAlleleNucleotides)])
+    keepLoc[locWithN] <- FALSE
+    # list alleles to remove
+    remAl <- which(!thisAlleles2loc %in% which(keepLoc))
+    
     # remove cut alleles from allele objects
     if(length(remAl) > 0){
       thisAlleleNucleotides <- thisAlleleNucleotides[-remAl]
@@ -834,6 +816,21 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
     }
     thisNallele <- length(thisAlleles2loc)
     
+    # pad out indels, using VCF convention of listing nucleotide before indel
+    indelLoc <- which(tapply(nchar(thisAlleleNucleotides), thisAlleles2loc,
+                             function(x) length(unique(x)) > 1))
+    for(i in indelLoc){
+      thiscol <- which(thisAlleles2loc == i)
+      thisAN <- thisAlleleNucleotides[thiscol]
+      maxWidth <- max(nchar(thisAN))
+      for(a in 1:length(thisAN)){
+        while(nchar(thisAN[a]) < maxWidth){
+          thisAN[a] <- paste(thisAN[a], "-", sep = "")
+        }
+      }
+      thisAlleleNucleotides[thiscol] <- thisAN
+    }
+
     # group SNPs into tags
     if(phaseSNPs && thisNloc > 0){
       # add the last marker to the current set if appropriate
@@ -919,10 +916,11 @@ VCF2RADdata <- function(file, phaseSNPs = TRUE, tagsize = 80, refgenome = NULL,
   # build RADdata object
   message("Building RADdata object...")
   radout <- RADdata(alleleDepth, alleles2loc, locTable, possiblePloidies,
-                    contamRate, alleleNucleotides)
+                    contamRate, alleleNucleotides, taxaPloidy)
   message("Merging rare haplotypes...")
   radout <- MergeRareHaplotypes(radout, 
                                 min.ind.with.haplotype = min.ind.with.minor.allele)
+  radout <- MergeIdenticalHaplotypes(radout)
   radout <- RemoveMonomorphicLoci(radout)
   
   # indicate whether non-variable sites included in alleleNucleotides
@@ -937,7 +935,7 @@ readStacks <- function(allelesFile, matchesFolder, version = 2,
                        min.ind.with.minor.allele = 10,
                        readAlignmentData = FALSE,
                        sumstatsFile = "populations.sumstats.tsv",
-                       possiblePloidies = list(2),
+                       possiblePloidies = list(2), taxaPloidy = 2L,
                        contamRate = 0.001){
   # get columns depending on version number
   if(!version %in% c(1,2)){
@@ -1033,29 +1031,16 @@ readStacks <- function(allelesFile, matchesFolder, version = 2,
   alleleDepth <- alleleDepth[reorder,]
   
   # filter loci
-  alRemove <- integer(0)
-  alIndex <- 1L
   indperal <- colSums(alleleDepth > 0)
-  while(alIndex <= length(alleleNames)){
-    # find allele columns for this locus
-    thisLoc <- locNames[alIndex]
-    thesecol <- alIndex
-    alIndex <- alIndex + 1L
-    while(alIndex <= length(alleleNames) && 
-          locNames[alIndex] == thisLoc){
-      thesecol <- c(thesecol, alIndex)
-      alIndex <- alIndex + 1L
-    }
-    
-    # determine whether to keep the locus
-    keepLoc <- sum(rowSums(alleleDepth[,thesecol, drop = FALSE]) > 0) >= min.ind.with.reads
-    if(keepLoc){
-      commonAllele <- which.max(indperal[thesecol])
-      keepLoc <- sum(indperal[thesecol[-commonAllele]]) >= min.ind.with.minor.allele
-    }
-    # update list of alleles to remove
-    if(!keepLoc) alRemove <- c(alRemove, thesecol)
-  }
+  indperloc <- rowSums(rowsum(t(alleleDepth), locNames) > 0)
+  locRemove <- which(indperloc < min.ind.with.reads |
+                       tapply(indperal, locNames,
+                              function(x){
+                                x <- x[-which.max(x)]
+                                sum(x) < min.ind.with.minor.allele
+                              }))
+  alRemove <- which(locNames %in% names(indperloc)[locRemove])
+  
   # subset objects
   alleleDepth <- alleleDepth[, -alRemove]
   locNames <- locNames[-alRemove]
@@ -1095,10 +1080,11 @@ readStacks <- function(allelesFile, matchesFolder, version = 2,
   
   # build RADdata object
   radout <- RADdata(alleleDepth, alleles2loc, locTable, possiblePloidies,
-                    contamRate, alleleNucleotides)
+                    contamRate, alleleNucleotides, taxaPloidy)
   message("Merging rare haplotypes...")
   radout <- MergeRareHaplotypes(radout, 
                                 min.ind.with.haplotype = min.ind.with.minor.allele)
+  radout <- MergeIdenticalHaplotypes(radout)
   radout <- RemoveMonomorphicLoci(radout)
   return(radout)
 }
@@ -1107,8 +1093,8 @@ readStacks <- function(allelesFile, matchesFolder, version = 2,
 # Use counts matrix output by GetTagTaxaDistFromDBPlugin, plus SAM file.
 readTASSELGBSv2 <- function(tagtaxadistFile, samFile, min.ind.with.reads = 200,
                             min.ind.with.minor.allele = 10,
-                            possiblePloidies = list(2), contamRate = 0.001,
-                            chromosomes = NULL){
+                            possiblePloidies = list(2), taxaPloidy = 2L,
+                            contamRate = 0.001, chromosomes = NULL){
   # read the SAM file
   message("Reading SAM file...")
   samwhat <- list(NULL, 0L, "", 0L, NULL, NULL, NULL, NULL, NULL, "", NULL,
@@ -1246,9 +1232,10 @@ readTASSELGBSv2 <- function(tagtaxadistFile, samFile, min.ind.with.reads = 200,
   # build RADdata object
   message("Building RADdata object...")
   radout <- RADdata(alleleDepth, alleles2loc, locTable, possiblePloidies,
-                    contamRate, samseq)
+                    contamRate, samseq, taxaPloidy)
   radout <- MergeRareHaplotypes(radout, 
                                 min.ind.with.haplotype = min.ind.with.minor.allele)
+  radout <- MergeIdenticalHaplotypes(radout)
   radout <- RemoveMonomorphicLoci(radout)
   attr(radout$alleleNucleotides, "Variable_sites_only") <- FALSE
   return(radout)
@@ -1259,7 +1246,8 @@ readTASSELGBSv2 <- function(tagtaxadistFile, samFile, min.ind.with.reads = 200,
 # the isolocus_splitter script.
 readProcessSamMulti <- function(alignfile, depthfile = sub("align", "depth", alignfile),
                                 expectedLoci = 1000, min.ind.with.reads = 200,
-                                min.ind.with.minor.allele = 10, possiblePloidies = list(2),
+                                min.ind.with.minor.allele = 10,
+                                possiblePloidies = list(2), taxaPloidy = 2L,
                                 contamRate = 0.001, expectedAlleles = expectedLoci * 15,
                                 maxLoci = expectedLoci){
   # read file headers
@@ -1402,7 +1390,7 @@ readProcessSamMulti <- function(alignfile, depthfile = sub("align", "depth", ali
   rownames(locTable) <- locnames
   colnames(alleleDepth) <- allelenames
   out <- RADdata(alleleDepth, alleles2loc, locTable, possiblePloidies,
-                 contamRate, alleleNucleotides)
+                 contamRate, alleleNucleotides, taxaPloidy)
 #  out <- MergeRareHaplotypes(out, min.ind.with.haplotype = min.ind.with.minor.allele)
 #  out <- RemoveMonomorphicLoci(out)
   return(out)
@@ -1411,8 +1399,8 @@ readProcessSamMulti <- function(alignfile, depthfile = sub("align", "depth", ali
 readProcessIsoloci <- function(sortedfile, min.ind.with.reads = 200,
                                min.ind.with.minor.allele = 10,
                                min.median.read.depth = 10,
-                               possiblePloidies = list(2), contamRate = 0.001,
-                               nameFromTagStart = TRUE,
+                               possiblePloidies = list(2), taxaPloidy = 2L,
+                               contamRate = 0.001, nameFromTagStart = TRUE,
                                mergeRareHap = TRUE){
   message("Reading file...")
   incon <- file(sortedfile, open = "r")
@@ -1487,22 +1475,24 @@ readProcessIsoloci <- function(sortedfile, min.ind.with.reads = 200,
   message("Building RADdata object...")
   attr(alleleNucleotides, "Variable_sites_only") <- FALSE
   radout <- RADdata(alleleDepth, alleles2loc, locTable, possiblePloidies,
-                    contamRate, alleleNucleotides)
+                    contamRate, alleleNucleotides, taxaPloidy)
   radout <- MergeIdenticalHaplotypes(radout)
   if(mergeRareHap){
     radout <- MergeRareHaplotypes(radout, 
                                   min.ind.with.haplotype = min.ind.with.minor.allele)
+    radout <- MergeIdenticalHaplotypes(radout)
     radout <- RemoveMonomorphicLoci(radout)
   }
   return(radout)
 }
 
 readDArTag <- function(file, botloci = NULL, blastfile = NULL,
-                        excludeHaps = NULL, includeHaps = NULL,
-                        n.header.rows = 7, sample.name.row = 7, 
-                        trim.sample.names = "_[^_]+_[ABCDEFGH][[:digit:]][012]?$",
-                        sep.counts = ",", sep.blast = "\t",
-                        possiblePloidies = list(2), contamRate = 0.001){
+                       excludeHaps = NULL, includeHaps = NULL,
+                       n.header.rows = 0, sample.name.row = 1, 
+                       trim.sample.names = "_[^_]+_[ABCDEFGH][[:digit:]][012]?$",
+                       sep.counts = ",", sep.blast = "\t",
+                       possiblePloidies = list(2), taxaPloidy = 2L,
+                       contamRate = 0.001){
   if(!is.null(excludeHaps) && !is.null(includeHaps)){
     stop("Only specify one of excludeHaps or includeHaps")
   }
@@ -1520,12 +1510,17 @@ readDArTag <- function(file, botloci = NULL, blastfile = NULL,
   close(mycon)
   
   # determine number of leading columns
-  hdr.split <- strsplit(hdr, split = ",")
-  n.lead.cols <-
-    unique(sapply(hdr.split, function(x) min(grep(".+", x)) - 1))
-  if(length(n.lead.cols) != 1){
-    stop("Not all sample headers start on same column. Be sure not to count the row starting with AlleleID towards n.header.rows.")
+  if(n.header.rows > 0){
+    hdr.split <- strsplit(hdr, split = ",")
+    n.lead.cols <-
+      unique(sapply(hdr.split, function(x) min(grep(".+", x)) - 1))
+    if(length(n.lead.cols) != 1){
+      stop("Not all sample headers start on same column. Be sure not to count the row starting with AlleleID towards n.header.rows.")
+    }
+  } else {
+    n.lead.cols <- sum(colnames(tab) %in% c("AlleleID", "CloneID", "AlleleSequence", "readCountSum"))
   }
+  
   if(!all(c("AlleleID", "CloneID", "AlleleSequence") %in% colnames(tab))){
     stop("Need AlleleID, CloneID, and AlleleSequence columns.")
   }
@@ -1572,10 +1567,25 @@ readDArTag <- function(file, botloci = NULL, blastfile = NULL,
   
   # Build locTable
   loci <- unique(tab$CloneID)
-  refals <- paste0(loci, "|Ref_001")
+  refals <- sapply(loci, function(L) grep(paste0("^", L, "\\|Ref(_[0]*1)?$"), tab$AlleleID, value = TRUE))
+  if(is.list(refals) || is.matrix(refals)){
+    stop("More than one reference allele found per locus.")
+  }
   locTable <- data.frame(row.names = loci,
                          Chr = sub("_[[:digit:]]+$", "", loci),
                          Pos = as.integer(sub("^.+_", "", loci)))
+  
+  # Trim allele tags as needed. DArT provided newer alleles as longer sequence.
+  taglength <- nchar(tab$AlleleSequence)
+  minlength <- tapply(taglength, tab$CloneID, min)
+  if(length(unique(minlength)) == 1){
+    tab$AlleleSequence <- substring(tab$AlleleSequence, 1, minlength[1])
+  } else {
+    for(L in loci){
+      theserows <- which(tab$CloneID == L)
+      tab$AlleleSequence[theserows] <- substring(tab$AlleleSequence[theserows], 1, minlength[L])
+    }
+  }
   
   # Do reverse complement where appropriate
   if(!is.null(blastfile)){
@@ -1634,8 +1644,8 @@ readDArTag <- function(file, botloci = NULL, blastfile = NULL,
     warning("Positions incorrect because target SNP could not be ascertained.")
   } else {
     locTable$Ref <- tab$AlleleSequence[match(refals, tab$AlleleID)]
-    altals <- paste0(loci, "|Alt_002")
-    if(!all(altals %in% tab$AlleleID)){
+    altals <- sapply(loci, function(L) grep(paste0("^", L, "\\|Alt(_[0]*2)?$"), tab$AlleleID, value = TRUE))
+    if(is.list(altals) || is.matrix(altals)){
       warning("Positions incorrect because target SNP could not be ascertained.")
     } else {
       # Convert position from target SNP to tag start
@@ -1658,6 +1668,9 @@ readDArTag <- function(file, botloci = NULL, blastfile = NULL,
   rownames(alleleDepth) <- samples
   
   message("Building RADdata object...")
-  return(RADdata(alleleDepth, alleles2loc, locTable, possiblePloidies,
-                 contamRate, alleleNucleotides))
+  out <- RADdata(alleleDepth, alleles2loc, locTable, possiblePloidies,
+                 contamRate, alleleNucleotides, taxaPloidy)
+  message("Merging identical haplotypes...")
+  out <- MergeIdenticalHaplotypes(out)
+  return(out)
 }
