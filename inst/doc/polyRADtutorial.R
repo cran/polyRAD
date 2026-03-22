@@ -35,7 +35,7 @@ mydata$locTable$Pos <- aligndata[GetLoci(mydata), 2]
 head(mydata$locTable)
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  mydata <- AddPCA(mydata)
+# mydata <- AddPCA(mydata)
 
 ## -----------------------------------------------------------------------------
 load(system.file("extdata", "examplePCA.RData", package = "polyRAD"))
@@ -141,8 +141,8 @@ library(VariantAnnotation)
 myVCF <- system.file("extdata", "Msi01genes.vcf", package = "polyRAD")
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  mybg <- bgzip(myVCF)
-#  indexTabix(mybg, format = "vcf")
+# mybg <- bgzip(myVCF)
+# indexTabix(mybg, format = "vcf")
 
 ## -----------------------------------------------------------------------------
 pldfile <- system.file("extdata", "Msi_ploidies.txt", package = "polyRAD")
@@ -159,8 +159,8 @@ mydata <- VCF2RADdata(myVCF, possiblePloidies = list(2, c(2,2)),
 mydata
 
 ## ----echo = FALSE, eval = !haveVA---------------------------------------------
-#  # If we don't have VariantAnnotation, load in the dataset
-#  load(system.file("extdata", "vcfdata.RData", package = "polyRAD"))
+# # If we don't have VariantAnnotation, load in the dataset
+# load(system.file("extdata", "vcfdata.RData", package = "polyRAD"))
 
 ## -----------------------------------------------------------------------------
 overdispersionP <- TestOverdispersion(mydata, to_test = 8:14)
@@ -244,8 +244,8 @@ wmgenoPopStruct <- GetWeightedMeanGenotypes(mydataPopStruct)
 wmgenoPopStruct[1:10,1:5]
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  myHindHe <- HindHe(mydata)
-#  TotDepthT <- rowSums(mydata$locDepth)
+# myHindHe <- HindHe(mydata)
+# TotDepthT <- rowSums(mydata$locDepth)
 
 ## -----------------------------------------------------------------------------
 print(load(system.file("extdata", "MsaHindHe0.RData", package = "polyRAD")))
@@ -288,100 +288,100 @@ length(goodLoci) # 611 out of 1000 markers retained
 head(goodLoci)
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  library(polyRAD)
-#  library(VariantAnnotation)
-#  
-#  # Two files produced by the TASSEL-GBSv2 pipeline using two different
-#  # enzyme systems.
-#  NsiI_file <- "170705Msi_NsiI_genotypes.vcf.bgz"
-#  PstI_file <- "170608Msi_PstI_genotypes.vcf.bgz"
-#  
-#  # The vector allSam was defined outside of this script, and contains the
-#  # names of all samples that I wanted to import.  Below I find sample names
-#  # within the VCF files that match those samples.
-#  NsiI_sam <- allSam[allSam %in% samples(scanVcfHeader(NsiI_file))]
-#  PstI_sam <- allSam[allSam %in% samples(scanVcfHeader(PstI_file))]
-#  
-#  # Import two RADdata objects, assuming diploidy.  A large yield size was
-#  # used due to the computer having 64 Gb RAM; on a typical laptop you
-#  # would probably want to keep the default of 5000.
-#  PstI_RAD <- VCF2RADdata(PstI_file, samples = PstI_sam, yieldSize = 5e4,
-#                          expectedAlleles = 1e6, expectedLoci = 2e5)
-#  NsiI_RAD <- VCF2RADdata(NsiI_file, samples = NsiI_sam, yieldSize = 5e4,
-#                          expectedAlleles = 1e6, expectedLoci = 2e5)
-#  
-#  # remove any loci duplicated across the two sets
-#  nLoci(PstI_RAD)    # 116757
-#  nLoci(NsiI_RAD)    # 187434
-#  nAlleles(PstI_RAD) # 478210
-#  nAlleles(NsiI_RAD) # 952511
-#  NsiI_keeploci <- which(!GetLoci(NsiI_RAD) %in% GetLoci(PstI_RAD))
-#  cat(nLoci(NsiI_RAD) - length(NsiI_keeploci),
-#      file = "180522Num_duplicate_loci.txt") #992 duplicate
-#  NsiI_RAD <- SubsetByLocus(NsiI_RAD, NsiI_keeploci)
-#  
-#  # combine allele depth into one matrix
-#  PstI_depth <- PstI_RAD$alleleDepth
-#  NsiI_depth <- NsiI_RAD$alleleDepth
-#  total_depth <- matrix(0L, nrow = length(allSam),
-#                        ncol = ncol(PstI_depth) + ncol(NsiI_depth),
-#                        dimnames = list(allSam,
-#                                        c(colnames(PstI_depth),
-#                                          colnames(NsiI_depth))))
-#  total_depth[,colnames(PstI_depth)] <- PstI_depth[allSam,]
-#  total_depth[rownames(NsiI_depth),colnames(NsiI_depth)] <- NsiI_depth
-#  
-#  # combine other slots
-#  total_alleles2loc <- c(PstI_RAD$alleles2loc,
-#                         NsiI_RAD$alleles2loc + nLoci(PstI_RAD))
-#  total_locTable <- rbind(PstI_RAD$locTable, NsiI_RAD$locTable)
-#  total_alleleNucleotides <- c(PstI_RAD$alleleNucleotides,
-#                               NsiI_RAD$alleleNucleotides)
-#  
-#  # build new RADdata object and save
-#  total_RAD <- RADdata(total_depth, total_alleles2loc, total_locTable,
-#                       list(2L), 0.001, total_alleleNucleotides)
-#  #save(total_RAD, file = "180524_RADdata_NsiIPstI.RData")
-#  
-#  # Make groups representing pairs of chromosomes, and one group for all
-#  # non-assembled scaffolds.
-#  splitlist <- list(c("^01$", "^02$"),
-#                    c("^03$", "^04$"),
-#                    c("^05$", "^06$"),
-#                    c("^07$", "^08$"),
-#                    c("^09$", "^10$"),
-#                    c("^11$", "^12$"),
-#                    c("^13$", "^14$", "^15$"),
-#                    c("^16$", "^17$"),
-#                    c("^18$", "^194"), "^SCAFFOLD")
-#  # split by chromosome and save seperate objects
-#  SplitByChromosome(total_RAD, chromlist = splitlist,
-#                    chromlist.use.regex = TRUE, fileprefix = "180524splitRAD")
-#  
-#  # files with RADdata objects
-#  splitfiles <- grep("^180524splitRAD", list.files("."), value = TRUE)
-#  
-#  # list to hold markers formatted for GAPIT/FarmCPU
-#  GAPITlist <- list()
-#  length(GAPITlist) <- length(splitfiles)
-#  
-#  # loop through RADdata objects
-#  for(i in 1:length(splitfiles)){
-#    load(splitfiles[i])
-#    splitRADdata <- IteratePopStructLD(splitRADdata)
-#    GAPITlist[[i]] <- ExportGAPIT(splitRADdata)
-#  }
-#  #save(GAPITlist, file = "180524GAPITlist.RData")
-#  
-#  # put together into one dataset for FarmCPU
-#  GM.all <- rbind(GAPITlist[[1]]$GM, GAPITlist[[2]]$GM, GAPITlist[[3]]$GM,
-#                  GAPITlist[[4]]$GM, GAPITlist[[5]]$GM, GAPITlist[[6]]$GM,
-#                  GAPITlist[[7]]$GM, GAPITlist[[8]]$GM,
-#                  GAPITlist[[9]]$GM, GAPITlist[[10]]$GM)
-#  GD.all <- cbind(GAPITlist[[1]]$GD, GAPITlist[[2]]$GD[,-1],
-#                  GAPITlist[[3]]$GD[,-1], GAPITlist[[4]]$GD[,-1],
-#                  GAPITlist[[5]]$GD[,-1], GAPITlist[[6]]$GD[,-1],
-#                  GAPITlist[[7]]$GD[,-1], GAPITlist[[8]]$GD[,-1],
-#                  GAPITlist[[9]]$GD[,-1], GAPITlist[[10]]$GD[,-1])
-#  #save(GD.all, GM.all, file = "180525GM_GD_all_polyRAD.RData") # 1076888 markers
+# library(polyRAD)
+# library(VariantAnnotation)
+# 
+# # Two files produced by the TASSEL-GBSv2 pipeline using two different
+# # enzyme systems.
+# NsiI_file <- "170705Msi_NsiI_genotypes.vcf.bgz"
+# PstI_file <- "170608Msi_PstI_genotypes.vcf.bgz"
+# 
+# # The vector allSam was defined outside of this script, and contains the
+# # names of all samples that I wanted to import.  Below I find sample names
+# # within the VCF files that match those samples.
+# NsiI_sam <- allSam[allSam %in% samples(scanVcfHeader(NsiI_file))]
+# PstI_sam <- allSam[allSam %in% samples(scanVcfHeader(PstI_file))]
+# 
+# # Import two RADdata objects, assuming diploidy.  A large yield size was
+# # used due to the computer having 64 Gb RAM; on a typical laptop you
+# # would probably want to keep the default of 5000.
+# PstI_RAD <- VCF2RADdata(PstI_file, samples = PstI_sam, yieldSize = 5e4,
+#                         expectedAlleles = 1e6, expectedLoci = 2e5)
+# NsiI_RAD <- VCF2RADdata(NsiI_file, samples = NsiI_sam, yieldSize = 5e4,
+#                         expectedAlleles = 1e6, expectedLoci = 2e5)
+# 
+# # remove any loci duplicated across the two sets
+# nLoci(PstI_RAD)    # 116757
+# nLoci(NsiI_RAD)    # 187434
+# nAlleles(PstI_RAD) # 478210
+# nAlleles(NsiI_RAD) # 952511
+# NsiI_keeploci <- which(!GetLoci(NsiI_RAD) %in% GetLoci(PstI_RAD))
+# cat(nLoci(NsiI_RAD) - length(NsiI_keeploci),
+#     file = "180522Num_duplicate_loci.txt") #992 duplicate
+# NsiI_RAD <- SubsetByLocus(NsiI_RAD, NsiI_keeploci)
+# 
+# # combine allele depth into one matrix
+# PstI_depth <- PstI_RAD$alleleDepth
+# NsiI_depth <- NsiI_RAD$alleleDepth
+# total_depth <- matrix(0L, nrow = length(allSam),
+#                       ncol = ncol(PstI_depth) + ncol(NsiI_depth),
+#                       dimnames = list(allSam,
+#                                       c(colnames(PstI_depth),
+#                                         colnames(NsiI_depth))))
+# total_depth[,colnames(PstI_depth)] <- PstI_depth[allSam,]
+# total_depth[rownames(NsiI_depth),colnames(NsiI_depth)] <- NsiI_depth
+# 
+# # combine other slots
+# total_alleles2loc <- c(PstI_RAD$alleles2loc,
+#                        NsiI_RAD$alleles2loc + nLoci(PstI_RAD))
+# total_locTable <- rbind(PstI_RAD$locTable, NsiI_RAD$locTable)
+# total_alleleNucleotides <- c(PstI_RAD$alleleNucleotides,
+#                              NsiI_RAD$alleleNucleotides)
+# 
+# # build new RADdata object and save
+# total_RAD <- RADdata(total_depth, total_alleles2loc, total_locTable,
+#                      list(2L), 0.001, total_alleleNucleotides)
+# #save(total_RAD, file = "180524_RADdata_NsiIPstI.RData")
+# 
+# # Make groups representing pairs of chromosomes, and one group for all
+# # non-assembled scaffolds.
+# splitlist <- list(c("^01$", "^02$"),
+#                   c("^03$", "^04$"),
+#                   c("^05$", "^06$"),
+#                   c("^07$", "^08$"),
+#                   c("^09$", "^10$"),
+#                   c("^11$", "^12$"),
+#                   c("^13$", "^14$", "^15$"),
+#                   c("^16$", "^17$"),
+#                   c("^18$", "^194"), "^SCAFFOLD")
+# # split by chromosome and save seperate objects
+# SplitByChromosome(total_RAD, chromlist = splitlist,
+#                   chromlist.use.regex = TRUE, fileprefix = "180524splitRAD")
+# 
+# # files with RADdata objects
+# splitfiles <- grep("^180524splitRAD", list.files("."), value = TRUE)
+# 
+# # list to hold markers formatted for GAPIT/FarmCPU
+# GAPITlist <- list()
+# length(GAPITlist) <- length(splitfiles)
+# 
+# # loop through RADdata objects
+# for(i in 1:length(splitfiles)){
+#   load(splitfiles[i])
+#   splitRADdata <- IteratePopStructLD(splitRADdata)
+#   GAPITlist[[i]] <- ExportGAPIT(splitRADdata)
+# }
+# #save(GAPITlist, file = "180524GAPITlist.RData")
+# 
+# # put together into one dataset for FarmCPU
+# GM.all <- rbind(GAPITlist[[1]]$GM, GAPITlist[[2]]$GM, GAPITlist[[3]]$GM,
+#                 GAPITlist[[4]]$GM, GAPITlist[[5]]$GM, GAPITlist[[6]]$GM,
+#                 GAPITlist[[7]]$GM, GAPITlist[[8]]$GM,
+#                 GAPITlist[[9]]$GM, GAPITlist[[10]]$GM)
+# GD.all <- cbind(GAPITlist[[1]]$GD, GAPITlist[[2]]$GD[,-1],
+#                 GAPITlist[[3]]$GD[,-1], GAPITlist[[4]]$GD[,-1],
+#                 GAPITlist[[5]]$GD[,-1], GAPITlist[[6]]$GD[,-1],
+#                 GAPITlist[[7]]$GD[,-1], GAPITlist[[8]]$GD[,-1],
+#                 GAPITlist[[9]]$GD[,-1], GAPITlist[[10]]$GD[,-1])
+# #save(GD.all, GM.all, file = "180525GM_GD_all_polyRAD.RData") # 1076888 markers
 

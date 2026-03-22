@@ -8,16 +8,16 @@ system.file("python", "process_sam_multi.py", package = "polyRAD")
 library(polyRAD)
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  myRADprelim <- readProcessSamMulti("Msa_split_1_align.csv")
+# myRADprelim <- readProcessSamMulti("Msa_split_1_align.csv")
 
 ## ----eval = FALSE, echo = FALSE-----------------------------------------------
-#  # subset the object to have diploids and a few tetras
-#  diploids <- readLines("diploids.txt")
-#  myRADprelim <- SubsetByTaxon(myRADprelim, c(diploids, "KMS397", "KMS444", "UI11-00032"))
+# # subset the object to have diploids and a few tetras
+# diploids <- readLines("diploids.txt")
+# myRADprelim <- SubsetByTaxon(myRADprelim, c(diploids, "KMS397", "KMS444", "UI11-00032"))
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  hh <- HindHe(myRADprelim)
-#  TotDepthT <- rowSums(myRADprelim$locDepth)
+# hh <- HindHe(myRADprelim)
+# TotDepthT <- rowSums(myRADprelim$locDepth)
 
 ## ----echo = FALSE-------------------------------------------------------------
 load(system.file("extdata", "MsaHindHe.RData", package = "polyRAD"))
@@ -37,10 +37,10 @@ hhByInd[hhByInd > threshold]
 hh <- hh[hhByInd <= threshold,]
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  myRADprelim <- SubsetByTaxon(myRADprelim, rownames(hh))
+# myRADprelim <- SubsetByTaxon(myRADprelim, rownames(hh))
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  writeLines(rownames(hh), con = "samples.txt")
+# writeLines(rownames(hh), con = "samples.txt")
 
 ## -----------------------------------------------------------------------------
 hhByLoc <- colMeans(hh, na.rm = TRUE)
@@ -48,10 +48,10 @@ hhByLoc <- colMeans(hh, na.rm = TRUE)
 hist(hhByLoc, breaks = 50, xlab = "Hind/He", main = "Loci", col = "lightgrey")
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  overdispersionP <- TestOverdispersion(myRADprelim, to_test = 9:14)
-#  
-#  sapply(overdispersionP[names(overdispersionP) != "optimal"],
-#         quantile, probs = c(0.01, 0.25, 0.5, 0.75, 0.99))
+# overdispersionP <- TestOverdispersion(myRADprelim, to_test = 9:14)
+# 
+# sapply(overdispersionP[names(overdispersionP) != "optimal"],
+#        quantile, probs = c(0.01, 0.25, 0.5, 0.75, 0.99))
 
 ## ----echo = FALSE-------------------------------------------------------------
 cat("Optimal value is 12.\n", sep = "\n")
@@ -67,7 +67,7 @@ print(structure(c(0.025793146160144, 0.253340971566736, 0.552888349753057,
     "13", "14"))))
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  ExpectedHindHe(myRADprelim, inbreeding = 0.4, ploidy = 2, overdispersion = 12)
+# ExpectedHindHe(myRADprelim, inbreeding = 0.4, ploidy = 2, overdispersion = 12)
 
 ## ----echo = FALSE-------------------------------------------------------------
 message("Simulating rep 1")
@@ -80,13 +80,13 @@ hist(testhhdist, xlab = "Hind/He", main = "Expected distribution of Hind/He",
      breaks = 30)
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  myRAD <- readProcessIsoloci("Msa_split_1_sorted.csv", min.ind.with.reads = 80,
-#                              min.ind.with.minor.allele = 5)
+# myRAD <- readProcessIsoloci("Msa_split_1_sorted.csv", min.ind.with.reads = 80,
+#                             min.ind.with.minor.allele = 5)
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  hh2 <- HindHe(myRAD)
-#  hh2ByInd <- rowMeans(hh2, na.rm = TRUE)
-#  hh2ByLoc <- colMeans(hh2, na.rm = TRUE)
+# hh2 <- HindHe(myRAD)
+# hh2ByInd <- rowMeans(hh2, na.rm = TRUE)
+# hh2ByLoc <- colMeans(hh2, na.rm = TRUE)
 
 ## ----echo = FALSE-------------------------------------------------------------
 load(system.file("extdata", "MsaHindHe2.RData", package = "polyRAD"))
@@ -102,11 +102,11 @@ head(keeploci)
 hist(hh2ByLoc[keeploci], xlab = "Hind/He", main = "Loci", breaks = 50, col = "lightgrey")
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  myRAD <- SubsetByLocus(myRAD, keeploci)
+# myRAD <- SubsetByLocus(myRAD, keeploci)
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  myRAD <- IteratePopStruct(myRAD, overdispersion = 12)
+# myRAD <- IteratePopStruct(myRAD, overdispersion = 12)
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  RADdata2VCF(myRAD, file = "Msa_test.vcf")
+# RADdata2VCF(myRAD, file = "Msa_test.vcf")
 

@@ -1079,7 +1079,7 @@ AddAlleleFreqByTaxa.RADdata <- function(object, minfreq = 0.0001, ...){
   PCcoef[is.na(PCcoef)] <- 0 # for non-variable sites
   
   # predict allele frequencies from PC axes
-  predAl <- object$PCA %*% PCcoef[-1,] + 
+  predAl <- object$PCA %*% PCcoef[-1,,drop=FALSE] + 
     matrix(PCcoef[1,], byrow = TRUE, nrow = nTaxa(object), 
            ncol = nAlleles(object))
   
@@ -1940,14 +1940,11 @@ StripDown.RADdata <- function(object,
   return(object)
 }
 
-# Function to find allele indices for nearby loci.
+# Internal function to find allele indices for nearby loci.
 # locus can be the number or name of the locus.
 # distance is the distance in basepairs within which to search.
 # allele indices (not locus indices) are returned
-FindNearbyAlleles <- function(object, ...){
-  UseMethod("FindNearbyAlleles", object)
-}
-FindNearbyAlleles.RADdata <- function(object, locus, distance){
+FindNearbyAlleles <- function(object, locus, distance){
   if(!all(c("Chr", "Pos") %in% names(object$locTable))){
     stop("Alignment data not present in RADdata object.")
   }
